@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lwplugin"
+version = "2.1.0"
+description = "LW Tools WS 异步订阅插件 Python SDK"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = ["websockets>=12,<16"]
+
+[project.optional-dependencies]
+panel = ["aiohttp>=3.10,<4", "jsonschema>=4.20,<5"]
+
+[project.urls]
+Repository = "https://github.com/AnxiangLemon/lw-plugins"
+Documentation = "https://github.com/AnxiangLemon/lw-plugins/tree/main/ws/python#readme"
+
+[tool.setuptools]
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages.find]
+include = ["lwplugin*"]

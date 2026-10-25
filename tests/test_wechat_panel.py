@@ -7,8 +7,6 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'ws/python'))
-# Tests can run from sibling source checkouts without installing the SDK.
-sys.path.insert(0, str(ROOT.parent / 'lw-sdk/sdk/python'))
 from aiohttp import ClientSession, web
 import wechat_panel as panel
 from wechat_panel_mock import DEMO_EMIT_KEY, start_mock

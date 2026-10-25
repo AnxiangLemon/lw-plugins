@@ -1,4 +1,4 @@
-"""Build the panel's public catalog from the host allowlist and current server docs (URL or file).
+"""Build panel schemas from a public method list and server docs (URL or file).
 
 Only GET /docs/swagger.json is performed; no business endpoint is called.
 """
@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import re
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,8 +74,7 @@ def sample(schema, name=''):
     return None
 
 
-def build(sdk, spec, source):
-    text = (sdk / 'crates/lw-platform-api/src/wechat_business.rs').read_text(encoding='utf-8')
+def build(allowed_methods, spec, source):
     def resolve(schema, seen=()):
         if '$ref' in schema:
             ref = schema['$ref'].rsplit('/', 1)[-1]
@@ -87,12 +85,15 @@ def build(sdk, spec, source):
         if 'properties' in result: result['additionalProperties'] = False
         return result
     methods = []
-    for block in re.findall(r'BusinessMethod \{(.*?)\n    \}', text, re.S):
-        match = re.search(r'name: "([^"]+)"', block)
-        if not match: continue
-        name = match[1]
-        path = re.search(r'path: "([^"]+)"', block)[1]
-        operation = spec['paths'][path]['post']
+    names = set()
+    for entry in allowed_methods:
+        name, path = entry['name'], entry['path']
+        if name in names:
+            raise ValueError(f'Duplicate public method: {name}')
+        names.add(name)
+        operation = spec.get('paths', {}).get(path, {}).get('post')
+        if operation is None:
+            raise ValueError(f'Missing POST documentation for {name}: {path}')
         body = next((p for p in operation.get('parameters', []) if p['in'] == 'body'), {})
         schema = resolve(body.get('schema', {'type': 'object', 'properties': {}}))
         props = {k: v for k, v in schema.get('properties', {}).items() if normalize(k) not in FORBIDDEN}
@@ -128,7 +129,9 @@ def build(sdk, spec, source):
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--sdk',type=Path,default=ROOT.parent/'lw-sdk')
+    parser.add_argument('--methods-file',type=Path,default=ROOT/'ws/python/wechat_panel/catalog.json',
+                        help='Public JSON catalog containing a methods list with name/path entries')
+    parser.add_argument('--output',type=Path,default=ROOT/'ws/python/wechat_panel/catalog.json')
     sources=parser.add_mutually_exclusive_group()
     sources.add_argument('--docs-url',default='http://localhost:8081/docs/swagger.json')
     sources.add_argument('--docs-file',type=Path,help='Current server docs/swagger.json, including a WSL UNC path')
@@ -139,6 +142,7 @@ if __name__ == '__main__':
     else:
         with urllib.request.urlopen(args.docs_url,timeout=10) as response: spec=json.load(response)
         source=args.docs_url
-    catalog=build(args.sdk,spec,source)
-    (ROOT/'ws/python/wechat_panel/catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    methods=json.loads(args.methods_file.read_text(encoding='utf-8'))['methods']
+    catalog=build(methods,spec,source)
+    args.output.write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     print(catalog['counts'])

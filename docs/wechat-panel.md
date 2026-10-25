@@ -6,7 +6,11 @@
 
 ## 安装与启动
 
-先按 [README 的 Python 安装步骤](../README.md#运行-python-示例)安装 `lwplugin` SDK 和依赖。以下命令均在仓库根目录执行。
+以下命令均在仓库根目录执行。`lwplugin` 源码和面板依赖均可从本仓库安装：
+
+```powershell
+python -m pip install -e './ws/python[panel]'
+```
 
 ### 模拟模式
 
@@ -14,7 +18,7 @@
 python ws/python/wechat_panel.py --demo --port 8765
 ```
 
-打开 <http://127.0.0.1:8765>。模拟模式使用隔离的内存 WS 宿主，不读取实际 endpoint 文件；浏览器连接后会收到模拟文本、表情和图片事件。模拟模式仍需要 SDK，但不需要运行实际宿主或登录微信。
+打开 <http://127.0.0.1:8765>。模拟模式使用隔离的内存 WS 宿主，不读取实际 endpoint 文件；浏览器连接后会收到模拟文本、表情和图片事件。SDK 随本仓库提供，不需要运行实际宿主或登录微信。
 
 ### 连接实际宿主
 

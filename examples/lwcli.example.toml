@@ -1,0 +1,10 @@
+# Copy to <data-root>/config/lwcli.toml and set your API address.
+[api]
+base_url = "http://127.0.0.1:8081"
+
+[plugin_ws]
+enabled = false
+host = "127.0.0.1"
+port = 26810
+# Leave empty to generate a token when explicitly enabling the service.
+token = ""

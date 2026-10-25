@@ -1,5 +1,5 @@
 """Real repository Python examples + HTTP panel -> Rust WS host -> mock lwsapi only.
-Invoked by tests/run_mock_flow.py. Never discovers a real endpoint.
+Invoked by the host integration harness. Never discovers a real endpoint.
 """
 import asyncio
 import importlib

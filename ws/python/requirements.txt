@@ -1,5 +1,2 @@
-# Install the maintainer-provided lwplugin SDK first; see README.md.
-websockets>=12,<16
-# Web explorer (the basic message examples do not require these packages)
-aiohttp>=3.10,<4
-jsonschema>=4.20,<5
+# Run from the repository root; installs the local SDK and panel dependencies.
+-e ./ws/python[panel]

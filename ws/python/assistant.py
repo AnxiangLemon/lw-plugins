@@ -5,7 +5,7 @@
 2. 可以查历史消息、查群成员等宿主 API；
 3. 可以自己起后台定时任务，主动发消息。
 
-    python examples/assistant.py
+    python ws/python/assistant.py
 """
 
 import asyncio

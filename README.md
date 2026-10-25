@@ -2,17 +2,36 @@
 
 LW Tools 的 Lua 插件、Python WebSocket（WS）示例和微信业务接口面板。
 
-本仓库公开维护插件源码与使用文档。运行插件需要兼容的 LW Desktop / Web 宿主；Python 示例还需要 `lwplugin` SDK。宿主和 SDK 位于私有仓库，不包含在本仓库中，请通过维护者提供的渠道获取程序或安装包。
+面向 LW Tools 插件开发者，提供 Lua 插件、`lwplugin` Python SDK、可运行示例、接口面板和测试。你可以仅凭本仓库安装 SDK、编写插件、运行测试与体验模拟面板；连接实际账号时，需要运行兼容的 LW Desktop / Web 宿主。
+
+宿主负责账号、业务授权和消息存储；插件通过 Lua API 或 WebSocket 使用宿主提供的能力，无需接入宿主内部实现。
 
 ## 从这里开始
 
 | 你想做什么 | 入口 |
 | --- | --- |
+| 编写第一个插件 | [插件开发入门](docs/plugin-development.md) |
 | 安装 Lua 插件 | [Lua 安装步骤](#安装-lua-插件) |
 | 验证 WS 连接和消息回复 | [Python 运行步骤](#运行-python-示例) |
 | 在浏览器中调试微信接口 | [微信接口面板](docs/wechat-panel.md) |
+| 编写 Python WS 插件 | [lwplugin SDK](ws/python/README.md) |
 | 编写微信业务调用 | [微信业务开发](docs/wechat-business.md) |
-| 运行测试或更新接口目录 | [开发与维护](docs/development.md) |
+| 运行测试或更新接口目录 | [开发与调试](docs/development.md) |
+
+## 快速体验
+
+以下命令使用 PowerShell；先确认已安装 Python 3.9+ 和 Git：
+
+```powershell
+git clone https://github.com/AnxiangLemon/lw-plugins.git
+cd lw-plugins
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e './ws/python[panel]'
+python ws/python/wechat_panel.py --demo
+```
+
+打开 <http://127.0.0.1:8765> 即可查看模拟消息、填写接口参数并检查调用结果，不需要运行实际宿主。按 `Ctrl+C` 停止。Linux / macOS 使用 `source .venv/bin/activate` 激活虚拟环境，其余步骤相同。
 
 ## 插件一览
 
@@ -42,10 +61,10 @@ LW Tools 的 Lua 插件、Python WebSocket（WS）示例和微信业务接口面
 | --- | --- |
 | LW 宿主 | 支持微信插件协议 v2；使用 Lua 时提供 Lua 插件运行环境 |
 | Python | 3.9 或更新版本 |
-| `lwplugin` | 2.0.0，或经宿主确认兼容的版本；由维护者提供 |
-| Python 依赖 | 见 [requirements.txt](ws/python/requirements.txt)，不包含 SDK 本身 |
+| `lwplugin` | 2.1.0，源码位于 [ws/python/lwplugin](ws/python/lwplugin) |
+| Python 依赖 | SDK 安装时自动安装；`panel` 可选依赖包含面板所需包 |
 
-Lua 由宿主直接加载，不需要单独安装 Lua。Python 示例运行在独立进程中，即使面板使用 `--demo`，也需要先安装 SDK。
+Lua 由宿主直接加载，不需要单独安装 Lua。Python 示例运行在独立进程中；模拟面板只需本仓库与 Python 环境。宿主配置示例见 [lwcli.example.toml](examples/lwcli.example.toml)，请按宿主版本调整后使用。
 
 ## 安装 Lua 插件
 
@@ -86,14 +105,16 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-安装维护者提供的 SDK wheel，再安装示例依赖。请将占位路径替换为实际文件：
+从当前公开仓库安装 SDK 和面板依赖：
 
 ```powershell
-python -m pip install 'C:\path\to\lwplugin-2.0.0-py3-none-any.whl'
-python -m pip install -r ws/python/requirements.txt
+python -m pip install -e './ws/python[panel]'
+python ws/python/wechat_panel.py --demo
 ```
 
-已有私有 SDK 源码权限的开发者，可按[维护文档](docs/development.md)从源码安装。
+打开 <http://127.0.0.1:8765> 即可体验，无需实际宿主。只运行 Echo 等基础插件时可用 `python -m pip install -e ./ws/python`，省略面板依赖。原来的 `python -m pip install -r ws/python/requirements.txt` 也会安装本仓库 SDK 与面板依赖。
+
+SDK API、事件与多平台调用见 [Python SDK 文档](ws/python/README.md)。
 
 ### 连接宿主
 
@@ -136,7 +157,7 @@ Echo 的回复前缀可通过 `LWPLUGIN_ECHO_PREFIX` 修改。Assistant 支持 `
 | 现象 | 检查项 |
 | --- | --- |
 | Lua 加载失败 | 文件目录、Lua 行号、`lib/L.lua`、`require("L")` 和 traceback |
-| `No module named 'lwplugin'` | 在当前虚拟环境中安装维护者提供的 SDK |
+| `No module named 'lwplugin'` | 在当前虚拟环境中执行 `python -m pip install -e ./ws/python` |
 | WS 无法接入 | 服务是否开启、连接文件路径、令牌、协议版本、插件接入权限 |
 | 收不到消息 | 账号在线状态、事件订阅、过滤条件、是否被 prefilter 拦截 |
 | 接口返回失败或等待超时 | 保存 `call_id`、幂等键和 `error`，查询原调用结果 |
