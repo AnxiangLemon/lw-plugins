@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>微信插件工作台</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><span class="logo">W</span><div><strong>微信插件工作台</strong><small>PLUGIN LAB <span id="mode">WS</span></small></div></div>
+    <div class="connection">
+      <span id="status" role="status">连接中…</span>
+      <div class="account-picker"><label for="account">操作账号</label><select id="account" aria-label="微信账号"><option value="">请选择微信账号</option></select></div>
+      <button id="refresh" class="quiet" type="button" title="刷新连接与账号列表">刷新</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <div id="notice" class="notice" role="status"></div>
+    <nav class="main-tabs" role="tablist" aria-label="工作台页面">
+      <button id="tab-messages" type="button" role="tab" aria-controls="panel-messages" aria-selected="true" tabindex="0">微信消息 <span id="tab-message-count" class="tab-count">0</span></button>
+      <button id="tab-explorer" type="button" role="tab" aria-controls="panel-explorer" aria-selected="false" tabindex="-1">接口调试</button>
+      <button id="tab-results" type="button" role="tab" aria-controls="panel-results" aria-selected="false" tabindex="-1">调用结果 <span id="tab-result-status" class="tab-result-status">未执行</span></button>
+    </nav>
+
+    <section id="panel-messages" class="tab-panel messages-panel" role="tabpanel" aria-labelledby="tab-messages">
+      <div class="panel-heading"><div><div class="eyebrow">实时事件</div><h1>微信消息</h1><p>插件收到什么，页面就显示什么；打开页面后开始接收。</p></div><div class="message-summary"><strong id="message-count">0</strong><span>本页收到</span></div></div>
+      <section class="card inbox-card" aria-label="消息列表">
+        <div class="section-heading"><h2>消息列表</h2><span id="message-status" class="muted" role="status">正在连接消息推送…</span></div>
+        <div id="message-list" class="message-list" aria-live="polite"><p class="message-empty">等待插件收到新消息…</p></div>
+        <p class="message-note">只显示本页打开期间插件实际收到的消息；不补查历史，不在服务端缓存。右上角的账号选择只用于接口调用。</p>
+      </section>
+    </section>
+
+    <section id="panel-explorer" class="tab-panel explorer-panel" role="tabpanel" aria-labelledby="tab-explorer" hidden>
+      <div class="explorer-layout">
+        <aside class="catalog-sidebar">
+          <div class="nav-heading">接口目录 <span id="count"></span></div>
+          <input id="search" type="search" placeholder="搜索接口或参数…" aria-label="搜索接口">
+          <div class="group-filter"><button id="group-toggle" type="button" aria-label="接口分类" aria-expanded="false" aria-controls="group-menu"><span id="group-label">全部分类</span><span class="chevron" aria-hidden="true"></span></button><div id="group-menu" class="group-menu" role="group" aria-label="选择接口分类" hidden></div></div>
+          <nav id="methods" aria-label="微信接口列表"></nav>
+          <div class="aside-note">业务参数由插件传递<br>登录态与服务授权由宿主管理</div>
+        </aside>
+        <main class="explorer-main">
+          <section id="method-empty" class="method-empty card"><span class="empty-icon">⌘</span><h1>选择一个接口开始</h1><p>从左侧目录查找业务接口，查看参数并生成调用代码。</p><button id="start-search" class="quiet" type="button">搜索接口</button></section>
+          <div id="method-workspace" hidden>
+            <section class="intro"><div class="eyebrow" id="category"></div><div class="title-line"><h1 id="title">选择一个接口</h1><span id="availability" class="badge"></span></div><div class="method-line"><code id="method-name"></code><span class="dot">·</span><code id="route"></code></div><p id="description"></p><details class="api-details"><summary>接口说明与返回约定</summary><p id="body-description" class="muted"></p><p id="return-note" class="muted"></p><p id="response-description" class="muted"></p><pre id="response-schema"></pre></details></section>
+            <section class="card request-card">
+              <div class="section-heading"><h2>请求参数 <span id="field-count" class="counter"></span></h2><button id="example" class="quiet" type="button">重置示例</button></div>
+              <p id="parameter-note" class="muted"></p><div id="fields"></div>
+              <details id="json-details"><summary>JSON 编辑器 <span class="muted">最终提交内容</span></summary><textarea id="arguments" spellcheck="false" aria-label="JSON 参数" rows="8"></textarea><p class="muted">表单修改会更新 JSON；直接编辑时以此处为准。</p></details>
+              <div class="action-bar"><span id="target-hint" class="muted">请先在右上角选择账号</span><div class="actions"><div id="call-mode" role="group" aria-label="调用方式"><button type="button" data-mode="call" aria-pressed="true">提交并等待</button><button type="button" data-mode="submit" aria-pressed="false">异步提交</button></div><button id="preview" class="quiet" type="button">校验 / 代码</button><button id="execute" class="primary" type="button" disabled>执行调用 →</button></div></div>
+              <p id="validation" role="status"></p>
+              <details id="code-details"><summary>Python 调用代码</summary><div class="code-actions"><button id="copy-code" class="quiet" type="button">复制代码</button></div><pre id="python"></pre></details>
+            </section>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <section id="panel-results" class="tab-panel results-panel" role="tabpanel" aria-labelledby="tab-results" hidden>
+      <div class="panel-heading"><div><div class="eyebrow">调用记录</div><h1>调用结果</h1><p>查看本次调用的状态、结构数据和原始 JSON。</p></div></div>
+      <section class="card response-card"><div class="section-heading"><h2>响应结果 <span id="result-status" class="badge neutral">未执行</span></h2><div class="toolbar"><button id="query-receipt" class="quiet" type="button" disabled>查询回执</button><button id="copy-result" class="quiet" type="button" disabled>复制</button><button id="download" class="quiet" type="button" disabled>下载</button></div></div><div id="result-meta" class="result-meta" role="status">执行后展示本次接口、账号和耗时</div><div class="result-tabs" role="tablist" aria-label="结果显示方式"><button id="tree-tab" role="tab" aria-selected="true" aria-controls="result-tree">结构视图</button><button id="raw-tab" role="tab" aria-selected="false" aria-controls="result">原始 JSON</button><span id="result-size" class="muted"></span></div><div id="result-tree" class="result-tree" role="tabpanel" aria-labelledby="tree-tab"><div class="empty-result"><span class="empty-icon">{ }</span><strong>等待调用</strong><p>在“接口调试”中选择账号与接口，执行后在这里查看结果。</p></div></div><pre id="result" role="tabpanel" aria-label="调用结果" aria-labelledby="raw-tab" hidden></pre><div id="result-note" class="result-note">结果仅保留在当前页面；不会自动重试请求。</div></section>
+    </section>
+
+    <footer><a href="http://localhost:8081/docs/" target="_blank" rel="noreferrer">服务 API 文档 ↗</a><span>超时后请先核对执行结果 · 媒体只转 Base64，不进行转码</span></footer>
+  </div>
+</body>
+</html>

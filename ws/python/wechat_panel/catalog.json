@@ -1,0 +1,5903 @@
+{
+  "version": 2,
+  "source": "lwsapi.swagger.json",
+  "source_sha256": "e7a268e68e786c027bd703be4a357db8fdc1b4f2f2e1c891f23ec255a80de4d6",
+  "methods": [
+    {
+      "name": "cdn.get_dns",
+      "group": "cdn",
+      "path": "/Cdn/GetDns",
+      "title": "获取 DNS",
+      "description": "上传和下载前需先调用。无缓存或失败后请再调一次。",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "DnsView",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "cdn.upload_image",
+      "group": "cdn",
+      "path": "/Cdn/UploadImage",
+      "title": "上传图片",
+      "description": "需先获取 DNS。发消息请再调 /Msg/SendCdnImgAfterUpload。sendOriginal=true 时对端可点原图。",
+      "body_description": "toWxid + base64；可选 sendOriginal",
+      "sending": false,
+      "fields": [
+        {
+          "name": "base64",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "图片文件的纯 Base64，不带 data: 前缀。"
+          },
+          "description": "图片文件的纯 Base64，不带 data: 前缀。"
+        },
+        {
+          "name": "sendOriginal",
+          "required": false,
+          "schema": {
+            "description": "SendOriginal 为 true 时：filedata 走原图 JPEG（不缩，q100 / 源 JPEG），mid/thumb 为 1280/180。\n对端可点「原图」。false（默认）与旧行为一致：filedata==mid。",
+            "type": "boolean"
+          },
+          "description": "SendOriginal 为 true 时：filedata 走原图 JPEG（不缩，q100 / 源 JPEG），mid/thumb 为 1280/180。\n对端可点「原图」。false（默认）与旧行为一致：filedata==mid。"
+        },
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "base64": {
+            "type": "string",
+            "description": "图片文件的纯 Base64，不带 data: 前缀。"
+          },
+          "sendOriginal": {
+            "description": "SendOriginal 为 true 时：filedata 走原图 JPEG（不缩，q100 / 源 JPEG），mid/thumb 为 1280/180。\n对端可点「原图」。false（默认）与旧行为一致：filedata==mid。",
+            "type": "boolean"
+          },
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "base64": "AA==",
+        "sendOriginal": false,
+        "toWxid": "wxid_example"
+      },
+      "response_description": "UploadImageResult",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "cdn.download_image",
+      "group": "cdn",
+      "path": "/Cdn/DownloadImage",
+      "title": "下载图片",
+      "description": "需先获取 DNS。",
+      "body_description": "fileNo + fileAesKey",
+      "sending": false,
+      "fields": [
+        {
+          "name": "fileAesKey",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "图片 CDN 解密密钥，来自收到的媒体消息或上传结果；不是登录 token。"
+          },
+          "description": "图片 CDN 解密密钥，来自收到的媒体消息或上传结果；不是登录 token。"
+        },
+        {
+          "name": "fileNo",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "图片 CDN 文件编号，来自媒体消息或上传结果。"
+          },
+          "description": "图片 CDN 文件编号，来自媒体消息或上传结果。"
+        },
+        {
+          "name": "fileType",
+          "required": false,
+          "schema": {
+            "description": "FileType CDN filetype：2=大图规格（默认），1=中图等；与 expectrulekey 对齐",
+            "type": "integer"
+          },
+          "description": "FileType CDN filetype：2=大图规格（默认），1=中图等；与 expectrulekey 对齐"
+        },
+        {
+          "name": "wxChatType",
+          "required": false,
+          "schema": {
+            "description": "WxChatType 0=单聊 1=群聊",
+            "type": "integer"
+          },
+          "description": "WxChatType 0=单聊 1=群聊"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "fileAesKey": {
+            "type": "string",
+            "description": "图片 CDN 解密密钥，来自收到的媒体消息或上传结果；不是登录 token。"
+          },
+          "fileNo": {
+            "type": "string",
+            "description": "图片 CDN 文件编号，来自媒体消息或上传结果。"
+          },
+          "fileType": {
+            "description": "FileType CDN filetype：2=大图规格（默认），1=中图等；与 expectrulekey 对齐",
+            "type": "integer"
+          },
+          "wxChatType": {
+            "description": "WxChatType 0=单聊 1=群聊",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "fileAesKey": "",
+        "fileNo": "",
+        "fileType": 0,
+        "wxChatType": 0
+      },
+      "response_description": "DownloadImageResult",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "favor.del",
+      "group": "favor",
+      "path": "/Favor/Del",
+      "title": "删除收藏",
+      "description": "删除指定的微信收藏项",
+      "body_description": "删除参数：favId为收藏项ID（从同步收藏接口获取）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "favId",
+          "required": false,
+          "schema": {
+            "description": "收藏项的ID，从同步收藏接口获取",
+            "type": "integer",
+            "example": 1001
+          },
+          "description": "收藏项的ID，从同步收藏接口获取"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "favId": {
+            "description": "收藏项的ID，从同步收藏接口获取",
+            "type": "integer",
+            "example": 1001
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "favId": 1001
+      },
+      "response_description": "返回删除结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "favor.get_fav_info",
+      "group": "favor",
+      "path": "/Favor/GetFavInfo",
+      "title": "获取收藏信息",
+      "description": "获取用户的微信收藏信息，包括收藏列表或元数据",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "返回收藏信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "favor.get_fav_item",
+      "group": "favor",
+      "path": "/Favor/GetFavItem",
+      "title": "读取收藏内容",
+      "description": "读取指定收藏项的详细内容",
+      "body_description": "收藏项参数：favId为收藏项ID（从同步收藏接口获取）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "favId",
+          "required": false,
+          "schema": {
+            "description": "收藏项的ID，从同步收藏接口获取",
+            "type": "integer",
+            "example": 1001
+          },
+          "description": "收藏项的ID，从同步收藏接口获取"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "favId": {
+            "description": "收藏项的ID，从同步收藏接口获取",
+            "type": "integer",
+            "example": 1001
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "favId": 1001
+      },
+      "response_description": "返回收藏项的详细内容",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "favor.sync",
+      "group": "favor",
+      "path": "/Favor/Sync",
+      "title": "同步收藏",
+      "description": "同步用户的微信收藏数据，返回收藏项列表和同步密钥",
+      "body_description": "同步参数：syncKey为上次同步返回的密钥（首次同步可留空）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "syncKey",
+          "required": false,
+          "schema": {
+            "description": "上次同步返回的密钥，首次同步可留空",
+            "type": "string",
+            "example": "key123"
+          },
+          "description": "上次同步返回的密钥，首次同步可留空"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "syncKey": {
+            "description": "上次同步返回的密钥，首次同步可留空",
+            "type": "string",
+            "example": "key123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "syncKey": "key123"
+      },
+      "response_description": "返回同步的收藏数据，包括返回码、收藏项列表和同步密钥",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "finder.new_user_prepare",
+      "group": "finder",
+      "path": "/Finder/NewUserPrepare",
+      "title": "新用户预加载",
+      "description": "初始化视频号新用户会话。",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "返回预加载结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "finder.user_prepare",
+      "group": "finder",
+      "path": "/Finder/UserPrepare",
+      "title": "用户中心预加载",
+      "description": "初始化视频号用户中心会话。",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "返回预加载结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "finder.user_page_preview",
+      "group": "finder",
+      "path": "/Finder/UserPagePreview",
+      "title": "获取好友视频号预览",
+      "description": "传入好友 wxid；对方无视频号时返回错误。",
+      "body_description": "toWxid",
+      "sending": false,
+      "fields": [
+        {
+          "name": "contactType",
+          "required": false,
+          "schema": {
+            "description": "联系人类型，默认 0",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "联系人类型，默认 0"
+        },
+        {
+          "name": "scene",
+          "required": false,
+          "schema": {
+            "description": "场景，默认 1",
+            "type": "integer",
+            "example": 1
+          },
+          "description": "场景，默认 1"
+        },
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "description": "好友 wxid",
+            "type": "string",
+            "example": "wxid_abc123"
+          },
+          "description": "好友 wxid"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "contactType": {
+            "description": "联系人类型，默认 0",
+            "type": "integer",
+            "example": 0
+          },
+          "scene": {
+            "description": "场景，默认 1",
+            "type": "integer",
+            "example": 1
+          },
+          "toWxid": {
+            "description": "好友 wxid",
+            "type": "string",
+            "example": "wxid_abc123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "contactType": 0,
+        "scene": 1,
+        "toWxid": "wxid_abc123"
+      },
+      "response_description": "返回预览结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.batch_get_contact_brief_info",
+      "group": "friend",
+      "path": "/Friend/BatchGetContactBriefInfo",
+      "title": "批量获取联系人简要信息",
+      "description": "传入 wxid，逗号分隔。可在初始化联系人之后补全资料。",
+      "body_description": "toWxids 逗号分隔",
+      "sending": false,
+      "fields": [
+        {
+          "name": "toWxids",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "wxid_abc123,wxid_def456",
+            "description": "服务端字段 toWxids，语义以接口说明为准。"
+          },
+          "description": "服务端字段 toWxids，语义以接口说明为准。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "toWxids": {
+            "type": "string",
+            "example": "wxid_abc123,wxid_def456",
+            "description": "服务端字段 toWxids，语义以接口说明为准。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "toWxids": "wxid_abc123,wxid_def456"
+      },
+      "response_description": "返回简要信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.blacklist",
+      "group": "friend",
+      "path": "/Friend/Blacklist",
+      "title": "添加或移除黑名单",
+      "description": "将指定用户添加或移除微信黑名单",
+      "body_description": "黑名单参数：toWxid为目标用户微信ID，val为操作值（15添加，7移除）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "description": "目标用户微信ID",
+            "type": "string",
+            "example": "wxid_67890"
+          },
+          "description": "目标用户微信ID"
+        },
+        {
+          "name": "val",
+          "required": false,
+          "schema": {
+            "description": "操作值，15为添加黑名单，7为移除黑名单",
+            "type": "integer",
+            "example": 15
+          },
+          "description": "操作值，15为添加黑名单，7为移除黑名单"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "toWxid": {
+            "description": "目标用户微信ID",
+            "type": "string",
+            "example": "wxid_67890"
+          },
+          "val": {
+            "description": "操作值，15为添加黑名单，7为移除黑名单",
+            "type": "integer",
+            "example": 15
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "toWxid": "wxid_67890",
+        "val": 15
+      },
+      "response_description": "返回操作结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.delete",
+      "group": "friend",
+      "path": "/Friend/Delete",
+      "title": "删除好友",
+      "description": "删除指定的微信好友",
+      "body_description": "删除参数：toWxid为要删除的好友微信ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "description": "要删除的好友微信ID",
+            "type": "string",
+            "example": "wxid_67890"
+          },
+          "description": "要删除的好友微信ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "toWxid": {
+            "description": "要删除的好友微信ID",
+            "type": "string",
+            "example": "wxid_67890"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "toWxid": "wxid_67890"
+      },
+      "response_description": "返回删除结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.get_contact_detail",
+      "group": "friend",
+      "path": "/Friend/GetContactDetail",
+      "title": "获取联系人详情",
+      "description": "获取指定联系人详情，最多 20 个；非群聊时 chatRoom 留空。",
+      "body_description": "toWxids 逗号分隔",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "服务端字段 chatRoomId，语义以接口说明为准。"
+          },
+          "description": "服务端字段 chatRoomId，语义以接口说明为准。"
+        },
+        {
+          "name": "toWxids",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "服务端字段 toWxids，语义以接口说明为准。"
+          },
+          "description": "服务端字段 toWxids，语义以接口说明为准。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "type": "string",
+            "description": "服务端字段 chatRoomId，语义以接口说明为准。"
+          },
+          "toWxids": {
+            "type": "string",
+            "description": "服务端字段 toWxids，语义以接口说明为准。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "example@chatroom",
+        "toWxids": "wxid_example"
+      },
+      "response_description": "返回联系人详细信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.init_contact",
+      "group": "friend",
+      "path": "/Friend/InitContact",
+      "title": "初始化联系人",
+      "description": "初始化或增量同步联系人。",
+      "body_description": "首次请求序列号填 0",
+      "sending": false,
+      "fields": [
+        {
+          "name": "currentChatRoomContactSeq",
+          "required": false,
+          "schema": {
+            "description": "当前群聊联系人序列号，首次请求填0",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "当前群聊联系人序列号，首次请求填0"
+        },
+        {
+          "name": "currentWxContactSeq",
+          "required": false,
+          "schema": {
+            "description": "当前联系人序列号，首次请求填0",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "当前联系人序列号，首次请求填0"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "currentChatRoomContactSeq": {
+            "description": "当前群聊联系人序列号，首次请求填0",
+            "type": "integer",
+            "example": 0
+          },
+          "currentWxContactSeq": {
+            "description": "当前联系人序列号，首次请求填0",
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "currentChatRoomContactSeq": 0,
+        "currentWxContactSeq": 0
+      },
+      "response_description": "返回初始化联系人结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.pass_verify",
+      "group": "friend",
+      "path": "/Friend/PassVerify",
+      "title": "同意好友验证",
+      "description": "从申请消息取 v3/v4。",
+      "body_description": "v3、v4、scene",
+      "sending": false,
+      "fields": [
+        {
+          "name": "friendFlag",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "example": 8,
+            "description": "好友标志值，使用当前验证场景对应值；文档未列出枚举。"
+          },
+          "description": "好友标志值，使用当前验证场景对应值；文档未列出枚举。"
+        },
+        {
+          "name": "scene",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "example": 3,
+            "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+          },
+          "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+        },
+        {
+          "name": "v3",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "v3_020b...@stranger",
+            "description": "好友请求/搜索结果中的 v3，直接使用该业务返回值。"
+          },
+          "description": "好友请求/搜索结果中的 v3，直接使用该业务返回值。"
+        },
+        {
+          "name": "v4",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "v4_000b...@stranger",
+            "description": "好友请求/搜索结果中的 v4，与同一次请求的 v3 配套。"
+          },
+          "description": "好友请求/搜索结果中的 v4，与同一次请求的 v3 配套。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "friendFlag": {
+            "type": "integer",
+            "example": 8,
+            "description": "好友标志值，使用当前验证场景对应值；文档未列出枚举。"
+          },
+          "scene": {
+            "type": "integer",
+            "example": 3,
+            "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+          },
+          "v3": {
+            "type": "string",
+            "example": "v3_020b...@stranger",
+            "description": "好友请求/搜索结果中的 v3，直接使用该业务返回值。"
+          },
+          "v4": {
+            "type": "string",
+            "example": "v4_000b...@stranger",
+            "description": "好友请求/搜索结果中的 v4，与同一次请求的 v3 配套。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "friendFlag": 8,
+        "scene": 3,
+        "v3": "v3_020b...@stranger",
+        "v4": "v4_000b...@stranger"
+      },
+      "response_description": "返回验证结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.search",
+      "group": "friend",
+      "path": "/Friend/Search",
+      "title": "搜索联系人",
+      "description": "搜索微信联系人，支持通过微信号或手机号查找",
+      "body_description": "搜索参数：toUserName为目标用户微信号或手机号，fromScene为来源场景（默认0），searchScene为搜索场景（默认1）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "fromScene",
+          "required": false,
+          "schema": {
+            "description": "来源场景，默认为0",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "来源场景，默认为0"
+        },
+        {
+          "name": "searchScene",
+          "required": false,
+          "schema": {
+            "description": "搜索场景，默认为1",
+            "type": "integer",
+            "example": 1
+          },
+          "description": "搜索场景，默认为1"
+        },
+        {
+          "name": "toUserName",
+          "required": false,
+          "schema": {
+            "description": "目标用户微信号或手机号",
+            "type": "string",
+            "example": "wxid_67890"
+          },
+          "description": "目标用户微信号或手机号"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "fromScene": {
+            "description": "来源场景，默认为0",
+            "type": "integer",
+            "example": 0
+          },
+          "searchScene": {
+            "description": "搜索场景，默认为1",
+            "type": "integer",
+            "example": 1
+          },
+          "toUserName": {
+            "description": "目标用户微信号或手机号",
+            "type": "string",
+            "example": "wxid_67890"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "fromScene": 0,
+        "searchScene": 1,
+        "toUserName": "wxid_67890"
+      },
+      "response_description": "返回搜索结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.set_remarks",
+      "group": "friend",
+      "path": "/Friend/SetRemarks",
+      "title": "设置好友备注",
+      "description": "为指定微信好友设置备注名称",
+      "body_description": "备注参数：toWxid为目标好友微信ID，remarks为备注名称",
+      "sending": false,
+      "fields": [
+        {
+          "name": "remarks",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "好友备注",
+            "description": "给目标好友设置的备注文字。"
+          },
+          "description": "给目标好友设置的备注文字。"
+        },
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "wxid_67890",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "remarks": {
+            "type": "string",
+            "example": "好友备注",
+            "description": "给目标好友设置的备注文字。"
+          },
+          "toWxid": {
+            "type": "string",
+            "example": "wxid_67890",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "remarks": "好友备注",
+        "toWxid": "wxid_67890"
+      },
+      "response_description": "返回设置结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.batch_mod_contact_type",
+      "group": "friend",
+      "path": "/Friend/BatchModContactType",
+      "title": "修改好友权限",
+      "description": "permKind：1仅聊天，2不让看朋友圈，3不看他朋友圈；modOperation：1开启限制，2取消限制。",
+      "body_description": "单条 toWxid，或批量 modTypeInfoList",
+      "sending": false,
+      "fields": [
+        {
+          "name": "modOperation",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "example": 1,
+            "description": "好友权限修改操作值；服务文档未列出枚举，请使用业务协议要求的值。"
+          },
+          "description": "好友权限修改操作值；服务文档未列出枚举，请使用业务协议要求的值。"
+        },
+        {
+          "name": "modType",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "example": 256,
+            "description": "好友权限修改类型；服务文档未列出枚举。"
+          },
+          "description": "好友权限修改类型；服务文档未列出枚举。"
+        },
+        {
+          "name": "modTypeInfoList",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "description": "permKind：1仅聊天 2不让看朋友圈 3不看他朋友圈；modOperation：1开启 2取消",
+              "type": "object",
+              "properties": {
+                "modOperation": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "modType": {
+                  "type": "integer",
+                  "example": 256
+                },
+                "permKind": {
+                  "type": "integer",
+                  "example": 2
+                },
+                "toWxid": {
+                  "type": "string",
+                  "example": "wxid_abc123"
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "权限修改项列表；结构见展开的嵌套参数文档。"
+          },
+          "description": "权限修改项列表；结构见展开的嵌套参数文档。"
+        },
+        {
+          "name": "permKind",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "example": 2,
+            "description": "权限种类标志；服务文档未列出枚举。"
+          },
+          "description": "权限种类标志；服务文档未列出枚举。"
+        },
+        {
+          "name": "scene",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "example": 0,
+            "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+          },
+          "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+        },
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "wxid_abc123",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "modOperation": {
+            "type": "integer",
+            "example": 1,
+            "description": "好友权限修改操作值；服务文档未列出枚举，请使用业务协议要求的值。"
+          },
+          "modType": {
+            "type": "integer",
+            "example": 256,
+            "description": "好友权限修改类型；服务文档未列出枚举。"
+          },
+          "modTypeInfoList": {
+            "type": "array",
+            "items": {
+              "description": "permKind：1仅聊天 2不让看朋友圈 3不看他朋友圈；modOperation：1开启 2取消",
+              "type": "object",
+              "properties": {
+                "modOperation": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "modType": {
+                  "type": "integer",
+                  "example": 256
+                },
+                "permKind": {
+                  "type": "integer",
+                  "example": 2
+                },
+                "toWxid": {
+                  "type": "string",
+                  "example": "wxid_abc123"
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "权限修改项列表；结构见展开的嵌套参数文档。"
+          },
+          "permKind": {
+            "type": "integer",
+            "example": 2,
+            "description": "权限种类标志；服务文档未列出枚举。"
+          },
+          "scene": {
+            "type": "integer",
+            "example": 0,
+            "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+          },
+          "toWxid": {
+            "type": "string",
+            "example": "wxid_abc123",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "modOperation": 1,
+        "modType": 256,
+        "modTypeInfoList": [
+          {
+            "modOperation": 1,
+            "modType": 256,
+            "permKind": 2,
+            "toWxid": "wxid_abc123"
+          }
+        ],
+        "permKind": 2,
+        "scene": 0,
+        "toWxid": "wxid_abc123"
+      },
+      "response_description": "返回修改结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "friend.send_verify",
+      "group": "friend",
+      "path": "/Friend/SendVerify",
+      "title": "发送好友请求",
+      "description": "搜索联系人后取 v3/v4 再调用。",
+      "body_description": "v3、v4、scene、verifyContent",
+      "sending": false,
+      "fields": [
+        {
+          "name": "friendFlag",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "example": 8,
+            "description": "好友标志值，使用当前验证场景对应值；文档未列出枚举。"
+          },
+          "description": "好友标志值，使用当前验证场景对应值；文档未列出枚举。"
+        },
+        {
+          "name": "scene",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "example": 3,
+            "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+          },
+          "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+        },
+        {
+          "name": "v3",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "v3_020b...@stranger",
+            "description": "好友请求/搜索结果中的 v3，直接使用该业务返回值。"
+          },
+          "description": "好友请求/搜索结果中的 v3，直接使用该业务返回值。"
+        },
+        {
+          "name": "v4",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "v4_000b...@stranger",
+            "description": "好友请求/搜索结果中的 v4，与同一次请求的 v3 配套。"
+          },
+          "description": "好友请求/搜索结果中的 v4，与同一次请求的 v3 配套。"
+        },
+        {
+          "name": "verifyContent",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "你好，我想加你为好友",
+            "description": "发送好友申请时的验证文字。"
+          },
+          "description": "发送好友申请时的验证文字。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "friendFlag": {
+            "type": "integer",
+            "example": 8,
+            "description": "好友标志值，使用当前验证场景对应值；文档未列出枚举。"
+          },
+          "scene": {
+            "type": "integer",
+            "example": 3,
+            "description": "好友操作的来源场景值，使用业务事件/搜索结果对应值；文档未列出完整枚举。"
+          },
+          "v3": {
+            "type": "string",
+            "example": "v3_020b...@stranger",
+            "description": "好友请求/搜索结果中的 v3，直接使用该业务返回值。"
+          },
+          "v4": {
+            "type": "string",
+            "example": "v4_000b...@stranger",
+            "description": "好友请求/搜索结果中的 v4，与同一次请求的 v3 配套。"
+          },
+          "verifyContent": {
+            "type": "string",
+            "example": "你好，我想加你为好友",
+            "description": "发送好友申请时的验证文字。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "friendFlag": 8,
+        "scene": 3,
+        "v3": "v3_020b...@stranger",
+        "v4": "v4_000b...@stranger",
+        "verifyContent": "你好，我想加你为好友"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.add_chat_room_member",
+      "group": "group",
+      "path": "/Group/AddChatRoomMember",
+      "title": "添加群成员",
+      "description": "向微信群聊添加成员（适用于40人以内群聊）",
+      "body_description": "添加参数：toWxids为目标用户微信ID列表（逗号分隔），chatRoomId为群聊ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        },
+        {
+          "name": "toWxids",
+          "required": false,
+          "schema": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          },
+          "description": "目标用户微信ID列表，多个ID用逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "toWxids": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001",
+        "toWxids": "wxid_67890,wxid_54321"
+      },
+      "response_description": "返回添加结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.del_chat_room_member",
+      "group": "group",
+      "path": "/Group/DelChatRoomMember",
+      "title": "删除群成员",
+      "description": "从微信群聊中删除指定成员",
+      "body_description": "删除参数：toWxids为目标用户微信ID列表（逗号分隔），chatRoomId为群聊ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        },
+        {
+          "name": "toWxids",
+          "required": false,
+          "schema": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          },
+          "description": "目标用户微信ID列表，多个ID用逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "toWxids": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001",
+        "toWxids": "wxid_67890,wxid_54321"
+      },
+      "response_description": "返回删除结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.create_chat_room",
+      "group": "group",
+      "path": "/Group/CreateChatRoom",
+      "title": "创建群聊",
+      "description": "创建新的微信群聊，需指定初始成员",
+      "body_description": "创建参数：toWxids为初始群成员微信ID列表（逗号分隔，至少三个）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "toWxids",
+          "required": false,
+          "schema": {
+            "description": "初始群成员微信ID列表，多个ID用逗号分隔，至少三个",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321,wxid_98765"
+          },
+          "description": "初始群成员微信ID列表，多个ID用逗号分隔，至少三个"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "toWxids": {
+            "description": "初始群成员微信ID列表，多个ID用逗号分隔，至少三个",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321,wxid_98765"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "toWxids": "wxid_67890,wxid_54321,wxid_98765"
+      },
+      "response_description": "返回创建结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.get_chat_room_info",
+      "group": "group",
+      "path": "/Group/GetChatRoomInfo",
+      "title": "获取群聊信息",
+      "description": "获取指定微信群聊的基本信息（不含公告）",
+      "body_description": "查询参数：chatRoomId为群聊ID（多个ID用逗号分隔）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID，多个ID用逗号分隔",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID，多个ID用逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID，多个ID用逗号分隔",
+            "type": "string",
+            "example": "chatroom_001"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001"
+      },
+      "response_description": "返回群聊基本信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.get_chat_room_info_detail",
+      "group": "group",
+      "path": "/Group/GetChatRoomInfoDetail",
+      "title": "获取群聊详细信息",
+      "description": "获取指定微信群聊的详细信息（包含公告）",
+      "body_description": "查询参数：chatRoomId为群聊ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID，多个ID用逗号分隔",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID，多个ID用逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID，多个ID用逗号分隔",
+            "type": "string",
+            "example": "chatroom_001"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001"
+      },
+      "response_description": "返回群聊详细信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.get_chat_room_member_detail",
+      "group": "group",
+      "path": "/Group/GetChatRoomMemberDetail",
+      "title": "获取群成员详情",
+      "description": "获取指定微信群聊的成员详细信息",
+      "body_description": "查询参数：chatRoomId为群聊ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID，多个ID用逗号分隔",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID，多个ID用逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID，多个ID用逗号分隔",
+            "type": "string",
+            "example": "chatroom_001"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001"
+      },
+      "response_description": "返回群成员详细信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.get_qrcode",
+      "group": "group",
+      "path": "/Group/GetQRCode",
+      "title": "获取群聊二维码",
+      "description": "获取指定微信群聊的二维码",
+      "body_description": "查询参数：chatRoomId为群聊ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID，多个ID用逗号分隔",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID，多个ID用逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID，多个ID用逗号分隔",
+            "type": "string",
+            "example": "chatroom_001"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001"
+      },
+      "response_description": "返回群聊二维码数据",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.invite_chat_room_member",
+      "group": "group",
+      "path": "/Group/InviteChatRoomMember",
+      "title": "邀请群成员",
+      "description": "邀请成员加入微信群聊（适用于40人以上群聊）",
+      "body_description": "邀请参数：toWxids为目标用户微信ID列表（逗号分隔），chatRoomId为群聊ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        },
+        {
+          "name": "toWxids",
+          "required": false,
+          "schema": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          },
+          "description": "目标用户微信ID列表，多个ID用逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "toWxids": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001",
+        "toWxids": "wxid_67890,wxid_54321"
+      },
+      "response_description": "返回邀请结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.quit",
+      "group": "group",
+      "path": "/Group/Quit",
+      "title": "退出群聊",
+      "description": "退出指定的微信群聊",
+      "body_description": "退出参数：chatRoomId为群聊ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001"
+      },
+      "response_description": "返回退出结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.scan_into_group",
+      "group": "group",
+      "path": "/Group/ScanIntoGroup",
+      "title": "扫码加入群聊",
+      "description": "通过群聊二维码链接加入微信群聊",
+      "body_description": "加入参数：url为群聊二维码链接",
+      "sending": false,
+      "fields": [
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "description": "群聊二维码链接",
+            "type": "string",
+            "example": "https://weixin.qq.com/g/abc123"
+          },
+          "description": "群聊二维码链接"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "群聊二维码链接",
+            "type": "string",
+            "example": "https://weixin.qq.com/g/abc123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "url": "https://weixin.qq.com/g/abc123"
+      },
+      "response_description": "返回加入结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.set_announcement",
+      "group": "group",
+      "path": "/Group/SetChatRoomAnnouncement",
+      "title": "设置群公告",
+      "description": "为指定微信群聊设置公告内容",
+      "body_description": "公告参数：chatRoomId为群聊ID，content为公告内容",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        },
+        {
+          "name": "content",
+          "required": false,
+          "schema": {
+            "description": "内容，设置为群名称或公告内容",
+            "type": "string",
+            "example": "新群名称或公告内容"
+          },
+          "description": "内容，设置为群名称或公告内容"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "content": {
+            "description": "内容，设置为群名称或公告内容",
+            "type": "string",
+            "example": "新群名称或公告内容"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001",
+        "content": "新群名称或公告内容"
+      },
+      "response_description": "返回设置结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.set_name",
+      "group": "group",
+      "path": "/Group/SetChatRoomName",
+      "title": "设置群聊名称",
+      "description": "为指定微信群聊设置名称",
+      "body_description": "名称参数：chatRoomId为群聊ID，content为群聊名称",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        },
+        {
+          "name": "content",
+          "required": false,
+          "schema": {
+            "description": "内容，设置为群名称或公告内容",
+            "type": "string",
+            "example": "新群名称或公告内容"
+          },
+          "description": "内容，设置为群名称或公告内容"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "content": {
+            "description": "内容，设置为群名称或公告内容",
+            "type": "string",
+            "example": "新群名称或公告内容"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001",
+        "content": "新群名称或公告内容"
+      },
+      "response_description": "返回设置结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.set_remarks",
+      "group": "group",
+      "path": "/Group/SetChatRoomRemarks",
+      "title": "设置群聊备注",
+      "description": "为指定微信群聊设置备注（仅自己可见）",
+      "body_description": "备注参数：chatRoomId为群聊ID，content为备注内容",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        },
+        {
+          "name": "content",
+          "required": false,
+          "schema": {
+            "description": "内容，设置为群名称或公告内容",
+            "type": "string",
+            "example": "新群名称或公告内容"
+          },
+          "description": "内容，设置为群名称或公告内容"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "content": {
+            "description": "内容，设置为群名称或公告内容",
+            "type": "string",
+            "example": "新群名称或公告内容"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001",
+        "content": "新群名称或公告内容"
+      },
+      "response_description": "返回设置结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.consent_to_join",
+      "group": "group",
+      "path": "/Group/ConsentToJoin",
+      "title": "同意加入群聊",
+      "description": "通过群聊邀请链接同意加入微信群聊",
+      "body_description": "加入参数：url为群聊邀请链接（从消息XML获取）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "description": "群聊邀请链接，从消息XML中获取",
+            "type": "string",
+            "example": "https://weixin.qq.com/g/abc123"
+          },
+          "description": "群聊邀请链接，从消息XML中获取"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "群聊邀请链接，从消息XML中获取",
+            "type": "string",
+            "example": "https://weixin.qq.com/g/abc123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "url": "https://weixin.qq.com/g/abc123"
+      },
+      "response_description": "返回加入结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.move_contact_list",
+      "group": "group",
+      "path": "/Group/MoveContactList",
+      "title": "保存或移除通讯录",
+      "description": "将指定微信群聊保存到通讯录或从中移除",
+      "body_description": "操作参数：chatRoomId为群聊ID，val为操作值（3添加，2移除）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        },
+        {
+          "name": "val",
+          "required": false,
+          "schema": {
+            "description": "操作值，3为添加，2为移除",
+            "type": "integer",
+            "example": 3
+          },
+          "description": "操作值，3为添加，2为移除"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "val": {
+            "description": "操作值，3为添加，2为移除",
+            "type": "integer",
+            "example": 3
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001",
+        "val": 3
+      },
+      "response_description": "返回操作结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.facing_create_chat_room",
+      "group": "group",
+      "path": "/Group/FacingCreateChatRoom",
+      "title": "面对面创建群聊",
+      "description": "通过密码和地理位置面对面创建微信群聊",
+      "body_description": "创建参数：password为群聊密码，opCode为操作码，latitude为纬度，longitude为经度",
+      "sending": false,
+      "fields": [
+        {
+          "name": "latitude",
+          "required": false,
+          "schema": {
+            "description": "纬度坐标",
+            "type": "number",
+            "example": 39.9042
+          },
+          "description": "纬度坐标"
+        },
+        {
+          "name": "longitude",
+          "required": false,
+          "schema": {
+            "description": "经度坐标",
+            "type": "number",
+            "example": 116.4074
+          },
+          "description": "经度坐标"
+        },
+        {
+          "name": "opCode",
+          "required": false,
+          "schema": {
+            "description": "操作码，具体含义由业务定义",
+            "type": "integer",
+            "example": 1
+          },
+          "description": "操作码，具体含义由业务定义"
+        },
+        {
+          "name": "password",
+          "required": false,
+          "schema": {
+            "description": "面对面群聊的密码",
+            "type": "string",
+            "example": "123456"
+          },
+          "description": "面对面群聊的密码"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "description": "纬度坐标",
+            "type": "number",
+            "example": 39.9042
+          },
+          "longitude": {
+            "description": "经度坐标",
+            "type": "number",
+            "example": 116.4074
+          },
+          "opCode": {
+            "description": "操作码，具体含义由业务定义",
+            "type": "integer",
+            "example": 1
+          },
+          "password": {
+            "description": "面对面群聊的密码",
+            "type": "string",
+            "example": "123456"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "latitude": 39.9042,
+        "longitude": 116.4074,
+        "opCode": 1,
+        "password": "123456"
+      },
+      "response_description": "OK",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.operate_chat_room_admin",
+      "group": "group",
+      "path": "/Group/OperateChatRoomAdmin",
+      "title": "群管理操作",
+      "description": "执行群聊管理操作，包括添加、删除或转让管理员",
+      "body_description": "管理参数：chatRoomId为群聊ID，toWxids为目标用户微信ID列表（逗号分隔，仅用于添加/删除），val为操作值（1添加，2删除，3转让）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "description": "群聊ID"
+        },
+        {
+          "name": "toWxids",
+          "required": false,
+          "schema": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔，仅用于添加或删除管理员",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          },
+          "description": "目标用户微信ID列表，多个ID用逗号分隔，仅用于添加或删除管理员"
+        },
+        {
+          "name": "val",
+          "required": false,
+          "schema": {
+            "description": "操作值，1为添加管理员，2为删除管理员，3为转让群主",
+            "type": "integer",
+            "example": 1
+          },
+          "description": "操作值，1为添加管理员，2为删除管理员，3为转让群主"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "description": "群聊ID",
+            "type": "string",
+            "example": "chatroom_001"
+          },
+          "toWxids": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔，仅用于添加或删除管理员",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          },
+          "val": {
+            "description": "操作值，1为添加管理员，2为删除管理员，3为转让群主",
+            "type": "integer",
+            "example": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "chatroom_001",
+        "toWxids": "wxid_67890,wxid_54321",
+        "val": 1
+      },
+      "response_description": "返回管理结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "group.scan_into_group_enterprise",
+      "group": "group",
+      "path": "/Group/ScanIntoGroupEnterprise",
+      "title": "扫码加入企业群聊",
+      "description": "通过二维码链接加入微信企业群聊",
+      "body_description": "加入参数：url为企业群聊二维码链接",
+      "sending": false,
+      "fields": [
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "description": "群聊二维码链接",
+            "type": "string",
+            "example": "https://weixin.qq.com/g/abc123"
+          },
+          "description": "群聊二维码链接"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "群聊二维码链接",
+            "type": "string",
+            "example": "https://weixin.qq.com/g/abc123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "url": "https://weixin.qq.com/g/abc123"
+      },
+      "response_description": "返回加入结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "label.get_list",
+      "group": "label",
+      "path": "/Label/GetList",
+      "title": "获取标签列表",
+      "description": "获取用户的微信标签列表",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "返回标签列表，Data包含标签信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "label.add",
+      "group": "label",
+      "path": "/Label/Add",
+      "title": "添加标签",
+      "description": "创建新的微信标签",
+      "body_description": "添加参数：labelName为标签名称",
+      "sending": false,
+      "fields": [
+        {
+          "name": "labelName",
+          "required": false,
+          "schema": {
+            "description": "标签名称",
+            "type": "string",
+            "example": "好友分组"
+          },
+          "description": "标签名称"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "labelName": {
+            "description": "标签名称",
+            "type": "string",
+            "example": "好友分组"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "labelName": "好友分组"
+      },
+      "response_description": "返回添加结果，Data包含新标签信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "label.delete",
+      "group": "label",
+      "path": "/Label/Delete",
+      "title": "删除标签",
+      "description": "删除指定的微信标签",
+      "body_description": "删除参数：labelId为标签ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "labelId",
+          "required": false,
+          "schema": {
+            "description": "标签ID",
+            "type": "string",
+            "example": "label_001"
+          },
+          "description": "标签ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "labelId": {
+            "description": "标签ID",
+            "type": "string",
+            "example": "label_001"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "labelId": "label_001"
+      },
+      "response_description": "返回删除结果，Data包含操作状态",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "label.update_list",
+      "group": "label",
+      "path": "/Label/UpdateList",
+      "title": "修改成员标签",
+      "description": "更新微信标签的成员列表",
+      "body_description": "更新参数：labelId为标签ID，toWxids为目标用户微信ID列表（逗号分隔）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "labelId",
+          "required": false,
+          "schema": {
+            "description": "标签ID 为成员添加多个标签可以逗号分隔，为空就是为该成员取消标签",
+            "type": "string",
+            "example": "label_001"
+          },
+          "description": "标签ID 为成员添加多个标签可以逗号分隔，为空就是为该成员取消标签"
+        },
+        {
+          "name": "toWxids",
+          "required": false,
+          "schema": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          },
+          "description": "目标用户微信ID列表，多个ID用逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "labelId": {
+            "description": "标签ID 为成员添加多个标签可以逗号分隔，为空就是为该成员取消标签",
+            "type": "string",
+            "example": "label_001"
+          },
+          "toWxids": {
+            "description": "目标用户微信ID列表，多个ID用逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "labelId": "label_001",
+        "toWxids": "wxid_67890,wxid_54321"
+      },
+      "response_description": "返回更新结果，Data包含操作状态",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "label.update_name",
+      "group": "label",
+      "path": "/Label/UpdateName",
+      "title": "修改标签名称",
+      "description": "修改指定微信标签的名称",
+      "body_description": "修改参数：labelId为标签ID，newName为新标签名称",
+      "sending": false,
+      "fields": [
+        {
+          "name": "labelId",
+          "required": false,
+          "schema": {
+            "description": "标签ID",
+            "type": "integer",
+            "example": 1001
+          },
+          "description": "标签ID"
+        },
+        {
+          "name": "newName",
+          "required": false,
+          "schema": {
+            "description": "新标签名称",
+            "type": "string",
+            "example": "新分组名称"
+          },
+          "description": "新标签名称"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "labelId": {
+            "description": "标签ID",
+            "type": "integer",
+            "example": 1001
+          },
+          "newName": {
+            "description": "新标签名称",
+            "type": "string",
+            "example": "新分组名称"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "labelId": 1001,
+        "newName": "新分组名称"
+      },
+      "response_description": "返回修改结果，Data包含操作状态",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_text_message",
+      "group": "msg",
+      "path": "/Msg/SendTxt",
+      "title": "发送文本消息",
+      "description": "发送文本消息，支持单聊或群聊，可@群成员",
+      "body_description": "文本消息参数：toWxid为接收者微信ID（单聊）或群ID（群聊），content为消息内容，at为群聊@的微信ID列表（逗号分隔）",
+      "sending": true,
+      "fields": [
+        {
+          "name": "at",
+          "required": false,
+          "schema": {
+            "description": "群聊中@的微信ID列表，逗号分隔",
+            "type": "string",
+            "example": "friend1,friend2"
+          },
+          "description": "群聊中@的微信ID列表，逗号分隔"
+        },
+        {
+          "name": "content",
+          "required": true,
+          "schema": {
+            "description": "要发送的文本消息内容",
+            "type": "string",
+            "example": "Hello, world!"
+          },
+          "description": "要发送的文本消息内容"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "description": "接收者的微信ID（单聊）或群ID（群聊）",
+            "type": "string",
+            "example": "wxid_67890"
+          },
+          "description": "接收者的微信ID（单聊）或群ID（群聊）"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "description": "群聊中@的微信ID列表，逗号分隔",
+            "type": "string",
+            "example": "friend1,friend2"
+          },
+          "content": {
+            "description": "要发送的文本消息内容",
+            "type": "string",
+            "example": "Hello, world!"
+          },
+          "toWxid": {
+            "description": "接收者的微信ID（单聊）或群ID（群聊）",
+            "type": "string",
+            "example": "wxid_67890"
+          }
+        },
+        "required": [
+          "toWxid",
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "at": "friend1,friend2",
+        "content": "hello from plugin",
+        "toWxid": "wxid_67890"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.revoke_message_raw",
+      "group": "msg",
+      "path": "/Msg/Revoke",
+      "title": "撤回消息",
+      "description": "撤回已发送的消息，需提供消息ID",
+      "body_description": "撤回参数：newMsgId为要撤回的消息ID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "clientMsgId",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "待撤回消息的客户端消息 ID，来自原消息/发送结果。"
+          },
+          "description": "待撤回消息的客户端消息 ID，来自原消息/发送结果。"
+        },
+        {
+          "name": "createTime",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "原消息的创建时间，直接使用原消息/发送结果中的值。"
+          },
+          "description": "原消息的创建时间，直接使用原消息/发送结果中的值。"
+        },
+        {
+          "name": "newMsgId",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "待撤回消息的服务消息 ID，来自原消息/发送结果；保留完整整数。"
+          },
+          "description": "待撤回消息的服务消息 ID，来自原消息/发送结果；保留完整整数。"
+        },
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "clientMsgId": {
+            "type": "integer",
+            "description": "待撤回消息的客户端消息 ID，来自原消息/发送结果。"
+          },
+          "createTime": {
+            "type": "integer",
+            "description": "原消息的创建时间，直接使用原消息/发送结果中的值。"
+          },
+          "newMsgId": {
+            "type": "integer",
+            "description": "待撤回消息的服务消息 ID，来自原消息/发送结果；保留完整整数。"
+          },
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "clientMsgId": 0,
+        "createTime": 0,
+        "newMsgId": 0,
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回撤回结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_app_message",
+      "group": "msg",
+      "path": "/Msg/SendApp",
+      "title": "发送小程序消息",
+      "description": "发送小程序消息，需提供小程序的XML数据和类型",
+      "body_description": "小程序消息参数：toWxid为接收者微信ID，xml为小程序XML数据，type为消息类型（根据场景设置）",
+      "sending": true,
+      "fields": [
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "description": "接收者的微信ID"
+        },
+        {
+          "name": "type",
+          "required": false,
+          "schema": {
+            "description": "小程序消息类型",
+            "type": "integer"
+          },
+          "description": "小程序消息类型"
+        },
+        {
+          "name": "xml",
+          "required": false,
+          "schema": {
+            "description": "小程序的XML数据",
+            "type": "string"
+          },
+          "description": "小程序的XML数据"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "toWxid": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "type": {
+            "description": "小程序消息类型",
+            "type": "integer"
+          },
+          "xml": {
+            "description": "小程序的XML数据",
+            "type": "string"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "toWxid": "wxid_example",
+        "type": 0,
+        "xml": ""
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_share_link",
+      "group": "msg",
+      "path": "/Msg/ShareLink",
+      "title": "发送分享链接消息",
+      "description": "发送包含标题、描述、URL和缩略图的分享链接消息",
+      "body_description": "分享链接参数：toWxid为接收者微信ID，title为链接标题，desc为链接描述，url为跳转地址，thumbUrl为缩略图URL",
+      "sending": true,
+      "fields": [
+        {
+          "name": "desc",
+          "required": false,
+          "schema": {
+            "description": "链接描述",
+            "type": "string"
+          },
+          "description": "链接描述"
+        },
+        {
+          "name": "thumbUrl",
+          "required": false,
+          "schema": {
+            "description": "链接缩略图URL",
+            "type": "string"
+          },
+          "description": "链接缩略图URL"
+        },
+        {
+          "name": "title",
+          "required": false,
+          "schema": {
+            "description": "链接标题",
+            "type": "string"
+          },
+          "description": "链接标题"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "description": "接收者的微信ID"
+        },
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "description": "链接URL",
+            "type": "string"
+          },
+          "description": "链接URL"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "desc": {
+            "description": "链接描述",
+            "type": "string"
+          },
+          "thumbUrl": {
+            "description": "链接缩略图URL",
+            "type": "string"
+          },
+          "title": {
+            "description": "链接标题",
+            "type": "string"
+          },
+          "toWxid": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "url": {
+            "description": "链接URL",
+            "type": "string"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "desc": "",
+        "thumbUrl": "https://example.com/image.jpg",
+        "title": "",
+        "toWxid": "wxid_example",
+        "url": "https://example.com/image.jpg"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_video_message",
+      "group": "msg",
+      "path": "/Msg/SendVideo",
+      "title": "发送视频消息",
+      "description": "发送视频消息，需提供视频和封面的Base64编码数据",
+      "body_description": "视频消息参数：toWxid为接收者微信ID，playLength为视频时长（秒），base64为视频的base64编码数据，imageBase64为封面的base64编码数据",
+      "sending": true,
+      "fields": [
+        {
+          "name": "base64",
+          "required": false,
+          "schema": {
+            "description": "视频内容的Base64编码",
+            "type": "string"
+          },
+          "description": "视频内容的Base64编码"
+        },
+        {
+          "name": "imageBase64",
+          "required": false,
+          "schema": {
+            "description": "视频封面的Base64编码",
+            "type": "string"
+          },
+          "description": "视频封面的Base64编码"
+        },
+        {
+          "name": "playLength",
+          "required": false,
+          "schema": {
+            "description": "视频播放时长（秒）",
+            "type": "integer"
+          },
+          "description": "视频播放时长（秒）"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "description": "接收者的微信ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "base64": {
+            "description": "视频内容的Base64编码",
+            "type": "string"
+          },
+          "imageBase64": {
+            "description": "视频封面的Base64编码",
+            "type": "string"
+          },
+          "playLength": {
+            "description": "视频播放时长（秒）",
+            "type": "integer"
+          },
+          "toWxid": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "base64": "AA==",
+        "imageBase64": "AA==",
+        "playLength": 2,
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_cdn_file",
+      "group": "msg",
+      "path": "/Msg/SendCDNFile",
+      "title": "转发文件",
+      "description": "按原消息内容转发文件，不重新上传。",
+      "body_description": "toWxid + 原消息 content",
+      "sending": true,
+      "fields": [
+        {
+          "name": "content",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "服务端字段 content，语义以接口说明为准。"
+          },
+          "description": "服务端字段 content，语义以接口说明为准。"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "服务端字段 content，语义以接口说明为准。"
+          },
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "content": "",
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_cdn_img",
+      "group": "msg",
+      "path": "/Msg/SendCDNImg",
+      "title": "转发图片",
+      "description": "按原消息内容转发图片，不重新上传。发新图请用发送图片。",
+      "body_description": "toWxid + 原消息 content",
+      "sending": true,
+      "fields": [
+        {
+          "name": "content",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "服务端字段 content，语义以接口说明为准。"
+          },
+          "description": "服务端字段 content，语义以接口说明为准。"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "服务端字段 content，语义以接口说明为准。"
+          },
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "content": "",
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_cdn_video",
+      "group": "msg",
+      "path": "/Msg/SendCDNVideo",
+      "title": "转发视频",
+      "description": "按原消息内容转发视频，不重新上传。",
+      "body_description": "toWxid + 原消息 content",
+      "sending": true,
+      "fields": [
+        {
+          "name": "content",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "服务端字段 content，语义以接口说明为准。"
+          },
+          "description": "服务端字段 content，语义以接口说明为准。"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "服务端字段 content，语义以接口说明为准。"
+          },
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "content": "",
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_emoji",
+      "group": "msg",
+      "path": "/Msg/SendEmoji",
+      "title": "发送表情消息",
+      "description": "发送表情消息，需提供表情数据和MD5校验值",
+      "body_description": "表情消息参数：toWxid为接收者微信ID，totalLen为表情数据长度，md5为表情数据的MD5校验值",
+      "sending": true,
+      "fields": [
+        {
+          "name": "md5",
+          "required": false,
+          "schema": {
+            "description": "表情数据的MD5校验值",
+            "type": "string"
+          },
+          "description": "表情数据的MD5校验值"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "description": "接收者的微信ID"
+        },
+        {
+          "name": "totalLen",
+          "required": false,
+          "schema": {
+            "description": "表情数据总长度",
+            "type": "integer"
+          },
+          "description": "表情数据总长度"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "md5": {
+            "description": "表情数据的MD5校验值",
+            "type": "string"
+          },
+          "toWxid": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "totalLen": {
+            "description": "表情数据总长度",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "md5": "",
+        "toWxid": "wxid_example",
+        "totalLen": 0
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_quote",
+      "group": "msg",
+      "path": "/Msg/SendQuote",
+      "title": "发送引用文本消息",
+      "description": "发送引用文本消息，支持引用其他用户的消息内容",
+      "body_description": "引用消息参数：fromWxid为被引用人的微信ID，displayName为被引用人名称，newMsgId为引用人消息的ID，msgContent为新消息内容，quoteContent为引用内容",
+      "sending": true,
+      "fields": [
+        {
+          "name": "displayName",
+          "required": false,
+          "schema": {
+            "description": "引用消息的显示名称",
+            "type": "string"
+          },
+          "description": "引用消息的显示名称"
+        },
+        {
+          "name": "fromWxid",
+          "required": false,
+          "schema": {
+            "description": "引用消息的发送者微信ID",
+            "type": "string"
+          },
+          "description": "引用消息的发送者微信ID"
+        },
+        {
+          "name": "msgContent",
+          "required": false,
+          "schema": {
+            "description": "新消息的内容",
+            "type": "string"
+          },
+          "description": "新消息的内容"
+        },
+        {
+          "name": "msgSeq",
+          "required": false,
+          "schema": {
+            "description": "消息序列号",
+            "type": "string"
+          },
+          "description": "消息序列号"
+        },
+        {
+          "name": "newMsgId",
+          "required": false,
+          "schema": {
+            "description": "新消息的ID",
+            "type": "string"
+          },
+          "description": "新消息的ID"
+        },
+        {
+          "name": "quoteContent",
+          "required": false,
+          "schema": {
+            "description": "引用的消息内容",
+            "type": "string"
+          },
+          "description": "引用的消息内容"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "description": "接收者的微信ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "description": "引用消息的显示名称",
+            "type": "string"
+          },
+          "fromWxid": {
+            "description": "引用消息的发送者微信ID",
+            "type": "string"
+          },
+          "msgContent": {
+            "description": "新消息的内容",
+            "type": "string"
+          },
+          "msgSeq": {
+            "description": "消息序列号",
+            "type": "string"
+          },
+          "newMsgId": {
+            "description": "新消息的ID",
+            "type": "string"
+          },
+          "quoteContent": {
+            "description": "引用的消息内容",
+            "type": "string"
+          },
+          "toWxid": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "displayName": "",
+        "fromWxid": "",
+        "msgContent": "",
+        "msgSeq": "",
+        "newMsgId": "",
+        "quoteContent": "",
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_voice",
+      "group": "msg",
+      "path": "/Msg/SendVoice",
+      "title": "发送语音消息",
+      "description": "发送语音消息，需指定语音格式和时长",
+      "body_description": "toWxid + base64；type：AMR=0 MP3=2 SILK=4 SPEEX=1 WAVE=3；voiceTime 毫秒",
+      "sending": true,
+      "fields": [
+        {
+          "name": "base64",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "已编码语音文件的纯 Base64，不带 data: 前缀；宿主不自动转码。"
+          },
+          "description": "已编码语音文件的纯 Base64，不带 data: 前缀；宿主不自动转码。"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        },
+        {
+          "name": "type",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "语音编码格式编号，必须与 Base64 内容一致；当前文档未列出完整枚举。"
+          },
+          "description": "语音编码格式编号，必须与 Base64 内容一致；当前文档未列出完整枚举。"
+        },
+        {
+          "name": "voiceTime",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "语音时长，示例 1000；当前文档未注明单位，按服务端约定传入。"
+          },
+          "description": "语音时长，示例 1000；当前文档未注明单位，按服务端约定传入。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "base64": {
+            "type": "string",
+            "description": "已编码语音文件的纯 Base64，不带 data: 前缀；宿主不自动转码。"
+          },
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "type": {
+            "type": "integer",
+            "description": "语音编码格式编号，必须与 Base64 内容一致；当前文档未列出完整枚举。"
+          },
+          "voiceTime": {
+            "type": "integer",
+            "description": "语音时长，示例 1000；当前文档未注明单位，按服务端约定传入。"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "base64": "AA==",
+        "toWxid": "wxid_example",
+        "type": 0,
+        "voiceTime": 1000
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.share_card",
+      "group": "msg",
+      "path": "/Msg/ShareCard",
+      "title": "分享名片",
+      "description": "分享微信名片，需提供名片相关信息",
+      "body_description": "名片参数：toWxid为接收者微信ID，cardWxid为名片微信ID，cardNickname为名片昵称，cardAlias为名片别名",
+      "sending": true,
+      "fields": [
+        {
+          "name": "cardAlias",
+          "required": false,
+          "schema": {
+            "description": "名片的别名",
+            "type": "string"
+          },
+          "description": "名片的别名"
+        },
+        {
+          "name": "cardNickname",
+          "required": false,
+          "schema": {
+            "description": "名片的昵称",
+            "type": "string"
+          },
+          "description": "名片的昵称"
+        },
+        {
+          "name": "cardWxid",
+          "required": false,
+          "schema": {
+            "description": "名片所属的微信ID",
+            "type": "string"
+          },
+          "description": "名片所属的微信ID"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "description": "接收者的微信ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "cardAlias": {
+            "description": "名片的别名",
+            "type": "string"
+          },
+          "cardNickname": {
+            "description": "名片的昵称",
+            "type": "string"
+          },
+          "cardWxid": {
+            "description": "名片所属的微信ID",
+            "type": "string"
+          },
+          "toWxid": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "cardAlias": "",
+        "cardNickname": "",
+        "cardWxid": "",
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.share_location",
+      "group": "msg",
+      "path": "/Msg/ShareLocation",
+      "title": "分享位置",
+      "description": "分享地理位置信息，需提供经纬度和位置描述",
+      "body_description": "位置参数：toWxid为接收者微信ID，x为经度，y为纬度，scale为地图缩放比例，label为位置标签，poiName为位置名称，infoUrl为附加信息URL",
+      "sending": true,
+      "fields": [
+        {
+          "name": "infoUrl",
+          "required": false,
+          "schema": {
+            "description": "位置的附加信息URL",
+            "type": "string"
+          },
+          "description": "位置的附加信息URL"
+        },
+        {
+          "name": "label",
+          "required": false,
+          "schema": {
+            "description": "位置标签或描述",
+            "type": "string"
+          },
+          "description": "位置标签或描述"
+        },
+        {
+          "name": "poiName",
+          "required": false,
+          "schema": {
+            "description": "位置名称",
+            "type": "string"
+          },
+          "description": "位置名称"
+        },
+        {
+          "name": "scale",
+          "required": false,
+          "schema": {
+            "description": "地图缩放比例",
+            "type": "number"
+          },
+          "description": "地图缩放比例"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "description": "接收者的微信ID"
+        },
+        {
+          "name": "x",
+          "required": false,
+          "schema": {
+            "description": "经度坐标",
+            "type": "number"
+          },
+          "description": "经度坐标"
+        },
+        {
+          "name": "y",
+          "required": false,
+          "schema": {
+            "description": "纬度坐标",
+            "type": "number"
+          },
+          "description": "纬度坐标"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "infoUrl": {
+            "description": "位置的附加信息URL",
+            "type": "string"
+          },
+          "label": {
+            "description": "位置标签或描述",
+            "type": "string"
+          },
+          "poiName": {
+            "description": "位置名称",
+            "type": "string"
+          },
+          "scale": {
+            "description": "地图缩放比例",
+            "type": "number"
+          },
+          "toWxid": {
+            "description": "接收者的微信ID",
+            "type": "string"
+          },
+          "x": {
+            "description": "经度坐标",
+            "type": "number"
+          },
+          "y": {
+            "description": "纬度坐标",
+            "type": "number"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "infoUrl": "",
+        "label": "",
+        "poiName": "",
+        "scale": 0,
+        "toWxid": "wxid_example",
+        "x": 0,
+        "y": 0
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.share_video",
+      "group": "msg",
+      "path": "/Msg/ShareVideo",
+      "title": "分享视频消息",
+      "description": "分享视频消息，需提供视频的XML数据",
+      "body_description": "toWxid + 视频 XML",
+      "sending": true,
+      "fields": [
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        },
+        {
+          "name": "xml",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "要分享的视频消息 XML，按服务端要求构造或取自原始消息。"
+          },
+          "description": "要分享的视频消息 XML，按服务端要求构造或取自原始消息。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "xml": {
+            "type": "string",
+            "description": "要分享的视频消息 XML，按服务端要求构造或取自原始消息。"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "toWxid": "wxid_example",
+        "xml": ""
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_image_via_cdn",
+      "group": "msg",
+      "path": "/Msg/SendImageViaCdn",
+      "title": "发送图片",
+      "description": "发送图片。也可先上传再调用上传后发图。转发已有图请用转发图片。sendOriginal=true 时对端可点原图。",
+      "body_description": "toWxid + base64；可选 sendOriginal",
+      "sending": true,
+      "fields": [
+        {
+          "name": "base64",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "图片文件的纯 Base64，不带 data: 前缀。"
+          },
+          "description": "图片文件的纯 Base64，不带 data: 前缀。"
+        },
+        {
+          "name": "sendOriginal",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "是否发送原图，使用 JSON 布尔值 true / false。"
+          },
+          "description": "是否发送原图，使用 JSON 布尔值 true / false。"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "base64": {
+            "type": "string",
+            "description": "图片文件的纯 Base64，不带 data: 前缀。"
+          },
+          "sendOriginal": {
+            "type": "boolean",
+            "description": "是否发送原图，使用 JSON 布尔值 true / false。"
+          },
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "base64": "AA==",
+        "sendOriginal": false,
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "msg.send_cdn_img_after_upload",
+      "group": "msg",
+      "path": "/Msg/SendCdnImgAfterUpload",
+      "title": "上传后发图",
+      "description": "使用 /Cdn/UploadImage 返回的数据发送图片消息。",
+      "body_description": "上传图片返回的元数据",
+      "sending": true,
+      "fields": [
+        {
+          "name": "aesKey",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "CDN 上传返回的文件 AES 密钥，按原值传入。"
+          },
+          "description": "CDN 上传返回的文件 AES 密钥，按原值传入。"
+        },
+        {
+          "name": "bigSize",
+          "required": false,
+          "schema": {
+            "description": "原图密文长；0 则与 midSize 相同（未发原图）",
+            "type": "integer"
+          },
+          "description": "原图密文长；0 则与 midSize 相同（未发原图）"
+        },
+        {
+          "name": "clientImgId",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "图片客户端标识，按 CDN 上传结果/协议传入。"
+          },
+          "description": "图片客户端标识，按 CDN 上传结果/协议传入。"
+        },
+        {
+          "name": "crc32",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "图片 CRC32 校验值，使用 CDN 上传结果中的值。"
+          },
+          "description": "图片 CRC32 校验值，使用 CDN 上传结果中的值。"
+        },
+        {
+          "name": "fileId",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "CDN 上传返回的文件 ID。"
+          },
+          "description": "CDN 上传返回的文件 ID。"
+        },
+        {
+          "name": "fileMd5",
+          "required": false,
+          "schema": {
+            "description": "原图明文 MD5；与 md5 不同时写入 checkmd5.newmd5",
+            "type": "string"
+          },
+          "description": "原图明文 MD5；与 md5 不同时写入 checkmd5.newmd5"
+        },
+        {
+          "name": "imgFileName",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "图片文件名，按上传结果/协议传入。"
+          },
+          "description": "图片文件名，按上传结果/协议传入。"
+        },
+        {
+          "name": "md5",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "图片内容的 MD5 校验值，使用上传结果中的值。"
+          },
+          "description": "图片内容的 MD5 校验值，使用上传结果中的值。"
+        },
+        {
+          "name": "midSize",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "中图大小，按 CDN 上传结果传入。"
+          },
+          "description": "中图大小，按 CDN 上传结果传入。"
+        },
+        {
+          "name": "thumbH",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "缩略图高度，按 CDN 上传结果传入。"
+          },
+          "description": "缩略图高度，按 CDN 上传结果传入。"
+        },
+        {
+          "name": "thumbSize",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "缩略图大小，按 CDN 上传结果传入。"
+          },
+          "description": "缩略图大小，按 CDN 上传结果传入。"
+        },
+        {
+          "name": "thumbW",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "description": "缩略图宽度，按 CDN 上传结果传入。"
+          },
+          "description": "缩略图宽度，按 CDN 上传结果传入。"
+        },
+        {
+          "name": "toWxid",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          },
+          "description": "接收人微信 ID 或群 ID。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "aesKey": {
+            "type": "string",
+            "description": "CDN 上传返回的文件 AES 密钥，按原值传入。"
+          },
+          "bigSize": {
+            "description": "原图密文长；0 则与 midSize 相同（未发原图）",
+            "type": "integer"
+          },
+          "clientImgId": {
+            "type": "string",
+            "description": "图片客户端标识，按 CDN 上传结果/协议传入。"
+          },
+          "crc32": {
+            "type": "integer",
+            "description": "图片 CRC32 校验值，使用 CDN 上传结果中的值。"
+          },
+          "fileId": {
+            "type": "string",
+            "description": "CDN 上传返回的文件 ID。"
+          },
+          "fileMd5": {
+            "description": "原图明文 MD5；与 md5 不同时写入 checkmd5.newmd5",
+            "type": "string"
+          },
+          "imgFileName": {
+            "type": "string",
+            "description": "图片文件名，按上传结果/协议传入。"
+          },
+          "md5": {
+            "type": "string",
+            "description": "图片内容的 MD5 校验值，使用上传结果中的值。"
+          },
+          "midSize": {
+            "type": "integer",
+            "description": "中图大小，按 CDN 上传结果传入。"
+          },
+          "thumbH": {
+            "type": "integer",
+            "description": "缩略图高度，按 CDN 上传结果传入。"
+          },
+          "thumbSize": {
+            "type": "integer",
+            "description": "缩略图大小，按 CDN 上传结果传入。"
+          },
+          "thumbW": {
+            "type": "integer",
+            "description": "缩略图宽度，按 CDN 上传结果传入。"
+          },
+          "toWxid": {
+            "type": "string",
+            "description": "接收人微信 ID 或群 ID。"
+          }
+        },
+        "required": [
+          "toWxid"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "aesKey": "",
+        "bigSize": 0,
+        "clientImgId": "",
+        "crc32": 0,
+        "fileId": "",
+        "fileMd5": "",
+        "imgFileName": "",
+        "md5": "",
+        "midSize": 0,
+        "thumbH": 0,
+        "thumbSize": 0,
+        "thumbW": 0,
+        "toWxid": "wxid_example"
+      },
+      "response_description": "返回发送结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "official.biz_profile_v2",
+      "group": "official",
+      "path": "/Official/BizProfileV2",
+      "title": "获取公众号文章列表",
+      "description": "获取指定公众号历史文章列表",
+      "body_description": "参数：bizUserName 为公众号用户名，pageSize 为每页条数，scene 为来源场景",
+      "sending": false,
+      "fields": [
+        {
+          "name": "bizUserName",
+          "required": false,
+          "schema": {
+            "description": "公众号的 biz 用户名",
+            "type": "string",
+            "example": "gh_abcdef123456"
+          },
+          "description": "公众号的 biz 用户名"
+        },
+        {
+          "name": "pageSize",
+          "required": false,
+          "schema": {
+            "description": "每页条数",
+            "type": "integer",
+            "example": 10
+          },
+          "description": "每页条数"
+        },
+        {
+          "name": "scene",
+          "required": false,
+          "schema": {
+            "description": "来源场景值（例如搜索、聊天等）",
+            "type": "integer",
+            "example": 1
+          },
+          "description": "来源场景值（例如搜索、聊天等）"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "bizUserName": {
+            "description": "公众号的 biz 用户名",
+            "type": "string",
+            "example": "gh_abcdef123456"
+          },
+          "pageSize": {
+            "description": "每页条数",
+            "type": "integer",
+            "example": 10
+          },
+          "scene": {
+            "description": "来源场景值（例如搜索、聊天等）",
+            "type": "integer",
+            "example": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "bizUserName": "gh_abcdef123456",
+        "pageSize": 10,
+        "scene": 1
+      },
+      "response_description": "OK",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "official.follow",
+      "group": "official",
+      "path": "/Official/Follow",
+      "title": "关注公众号",
+      "description": "用户发起关注公众号操作",
+      "body_description": "关注参数：appId为公众号AppID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "appId",
+          "required": false,
+          "schema": {
+            "description": "公众号 AppID",
+            "type": "string",
+            "example": "wx9876543210"
+          },
+          "description": "公众号 AppID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "description": "公众号 AppID",
+            "type": "string",
+            "example": "wx9876543210"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "appId": "wx9876543210"
+      },
+      "response_description": "OK",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "official.get_app_msg_ext",
+      "group": "official",
+      "path": "/Official/GetAppMsgExt",
+      "title": "阅读文章",
+      "description": "模拟用户行为读取文章详情并触发阅读",
+      "body_description": "参数：url为文章地址",
+      "sending": false,
+      "fields": [
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "description": "公众号文章链接",
+            "type": "string",
+            "example": "https://mp.weixin.qq.com/s/example123"
+          },
+          "description": "公众号文章链接"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "公众号文章链接",
+            "type": "string",
+            "example": "https://mp.weixin.qq.com/s/example123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "url": "https://mp.weixin.qq.com/s/example123"
+      },
+      "response_description": "OK",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "official.get_app_msg_ext_like",
+      "group": "official",
+      "path": "/Official/GetAppMsgExtLike",
+      "title": "点赞文章",
+      "description": "点赞指定的公众号文章",
+      "body_description": "参数：url为文章地址",
+      "sending": false,
+      "fields": [
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "description": "公众号文章链接",
+            "type": "string",
+            "example": "https://mp.weixin.qq.com/s/example123"
+          },
+          "description": "公众号文章链接"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "公众号文章链接",
+            "type": "string",
+            "example": "https://mp.weixin.qq.com/s/example123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "url": "https://mp.weixin.qq.com/s/example123"
+      },
+      "response_description": "OK",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "official.get_comment_data",
+      "group": "official",
+      "path": "/Official/GetCommentData",
+      "title": "获取文章评论数据",
+      "description": "获取公众号文章的评论内容或评论数",
+      "body_description": "参数：url为文章地址",
+      "sending": false,
+      "fields": [
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "description": "公众号文章链接",
+            "type": "string",
+            "example": "https://mp.weixin.qq.com/s/example123"
+          },
+          "description": "公众号文章链接"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "公众号文章链接",
+            "type": "string",
+            "example": "https://mp.weixin.qq.com/s/example123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "url": "https://mp.weixin.qq.com/s/example123"
+      },
+      "response_description": "OK",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "official.get_read_data",
+      "group": "official",
+      "path": "/Official/GetReadData",
+      "title": "获取文章阅读数据",
+      "description": "获取指定公众号文章的阅读数等统计信息",
+      "body_description": "参数：url为文章地址",
+      "sending": false,
+      "fields": [
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "description": "公众号文章链接",
+            "type": "string",
+            "example": "https://mp.weixin.qq.com/s/example123"
+          },
+          "description": "公众号文章链接"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "公众号文章链接",
+            "type": "string",
+            "example": "https://mp.weixin.qq.com/s/example123"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "url": "https://mp.weixin.qq.com/s/example123"
+      },
+      "response_description": "OK",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "official.quit",
+      "group": "official",
+      "path": "/Official/Quit",
+      "title": "取消关注公众号",
+      "description": "用户发起取消关注操作",
+      "body_description": "取消关注参数：appId为公众号AppID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "appId",
+          "required": false,
+          "schema": {
+            "description": "公众号 AppID",
+            "type": "string",
+            "example": "wx9876543210"
+          },
+          "description": "公众号 AppID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "description": "公众号 AppID",
+            "type": "string",
+            "example": "wx9876543210"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "appId": "wx9876543210"
+      },
+      "response_description": "OK",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "openim.contact_sync",
+      "group": "openim",
+      "path": "/OpenIM/ContactSync",
+      "title": "联系人同步",
+      "description": "同步 OpenIM 联系人，登录态自动带入。",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "返回同步结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "openim.get_contact",
+      "group": "openim",
+      "path": "/OpenIM/GetContact",
+      "title": "获取联系人详情",
+      "description": "获取企业微信联系人详情。",
+      "body_description": "联系人参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "chatRoomId",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "",
+            "description": "服务端字段 chatRoomId，语义以接口说明为准。"
+          },
+          "description": "服务端字段 chatRoomId，语义以接口说明为准。"
+        },
+        {
+          "name": "ticket",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "",
+            "description": "联系人查询的业务 ticket；使用消息/联系人业务返回的值，不是宿主连接 token。"
+          },
+          "description": "联系人查询的业务 ticket；使用消息/联系人业务返回的值，不是宿主连接 token。"
+        },
+        {
+          "name": "tpUsername",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "example": "2598485501208461@openim",
+            "description": "服务端字段 tpUsername，语义以接口说明为准。"
+          },
+          "description": "服务端字段 tpUsername，语义以接口说明为准。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chatRoomId": {
+            "type": "string",
+            "example": "",
+            "description": "服务端字段 chatRoomId，语义以接口说明为准。"
+          },
+          "ticket": {
+            "type": "string",
+            "example": "",
+            "description": "联系人查询的业务 ticket；使用消息/联系人业务返回的值，不是宿主连接 token。"
+          },
+          "tpUsername": {
+            "type": "string",
+            "example": "2598485501208461@openim",
+            "description": "服务端字段 tpUsername，语义以接口说明为准。"
+          }
+        },
+        "required": [
+          "tpUsername"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "chatRoomId": "",
+        "ticket": "",
+        "tpUsername": "2598485501208461@openim"
+      },
+      "response_description": "返回联系人详情",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "openim.get_resource",
+      "group": "openim",
+      "path": "/OpenIM/GetResource",
+      "title": "获取资源",
+      "description": "获取 OpenIM 文案与资源。",
+      "body_description": "资源参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "appId",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "3552365301",
+            "description": "服务端字段 appId，语义以接口说明为准。"
+          },
+          "description": "服务端字段 appId，语义以接口说明为准。"
+        },
+        {
+          "name": "language",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "example": "zh_CN",
+            "description": "资源语言标识，格式以服务端业务协议为准。"
+          },
+          "description": "资源语言标识，格式以服务端业务协议为准。"
+        },
+        {
+          "name": "wordingIdList",
+          "required": true,
+          "schema": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "2802AB1FA2DD3D2430827B78BD4C1D74RI01@im.wxwork"
+            ],
+            "description": "服务端字段 wordingIdList，语义以接口说明为准。"
+          },
+          "description": "服务端字段 wordingIdList，语义以接口说明为准。"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "example": "3552365301",
+            "description": "服务端字段 appId，语义以接口说明为准。"
+          },
+          "language": {
+            "type": "string",
+            "example": "zh_CN",
+            "description": "资源语言标识，格式以服务端业务协议为准。"
+          },
+          "wordingIdList": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "2802AB1FA2DD3D2430827B78BD4C1D74RI01@im.wxwork"
+            ],
+            "description": "服务端字段 wordingIdList，语义以接口说明为准。"
+          }
+        },
+        "required": [
+          "wordingIdList"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "appId": "3552365301",
+        "language": "zh_CN",
+        "wordingIdList": [
+          "2802AB1FA2DD3D2430827B78BD4C1D74RI01@im.wxwork"
+        ]
+      },
+      "response_description": "返回资源",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "openim.get_status",
+      "group": "openim",
+      "path": "/OpenIM/GetStatus",
+      "title": "获取状态配置",
+      "description": "获取 OpenIM 状态配置。",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "返回状态配置",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "openim.sync",
+      "group": "openim",
+      "path": "/OpenIM/Sync",
+      "title": "增量同步",
+      "description": "同步 OpenIM 消息，登录态自动带入。",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "返回同步结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "search.suggestion",
+      "group": "search",
+      "path": "/Search/Suggestion",
+      "title": "搜一搜建议",
+      "description": "获取搜一搜关键字建议",
+      "body_description": "搜索参数：keyword为搜索关键字",
+      "sending": false,
+      "fields": [
+        {
+          "name": "keyword",
+          "required": false,
+          "schema": {
+            "description": "搜索关键字",
+            "type": "string",
+            "example": "文章"
+          },
+          "description": "搜索关键字"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "description": "搜索关键字",
+            "type": "string",
+            "example": "文章"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "keyword": "文章"
+      },
+      "response_description": "返回搜索建议",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "search.web_search",
+      "group": "search",
+      "path": "/Search/WebSearch",
+      "title": "搜一搜",
+      "description": "微信搜一搜（文章等）",
+      "body_description": "搜索参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "keyword",
+          "required": false,
+          "schema": {
+            "description": "搜索关键字",
+            "type": "string",
+            "example": "文章"
+          },
+          "description": "搜索关键字"
+        },
+        {
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "description": "偏移量，用于分页",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "偏移量，用于分页"
+        },
+        {
+          "name": "suggestionId",
+          "required": false,
+          "schema": {
+            "description": "建议ID",
+            "type": "string",
+            "example": "sugg_001"
+          },
+          "description": "建议ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "description": "搜索关键字",
+            "type": "string",
+            "example": "文章"
+          },
+          "offset": {
+            "description": "偏移量，用于分页",
+            "type": "integer",
+            "example": 0
+          },
+          "suggestionId": {
+            "description": "建议ID",
+            "type": "string",
+            "example": "sugg_001"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "keyword": "文章",
+        "offset": 0,
+        "suggestionId": "sugg_001"
+      },
+      "response_description": "返回搜索结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.comment",
+      "group": "sns",
+      "path": "/Sns/Comment",
+      "title": "朋友圈点赞或评论",
+      "description": "对朋友圈内容进行点赞或评论",
+      "body_description": "操作参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "content",
+          "required": false,
+          "schema": {
+            "description": "评论内容（当Type为2或3时有效）",
+            "type": "string",
+            "example": "好棒！"
+          },
+          "description": "评论内容（当Type为2或3时有效）"
+        },
+        {
+          "name": "id",
+          "required": false,
+          "schema": {
+            "description": "朋友圈内容ID",
+            "type": "string",
+            "example": "sns_001"
+          },
+          "description": "朋友圈内容ID"
+        },
+        {
+          "name": "replyCommentId",
+          "required": false,
+          "schema": {
+            "description": "回复的评论ID（当Type为2或3时有效）",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "回复的评论ID（当Type为2或3时有效）"
+        },
+        {
+          "name": "type",
+          "required": false,
+          "schema": {
+            "description": "操作类型，1为点赞，2为文本评论，3为消息评论，4为with，5为陌生人点赞",
+            "type": "integer",
+            "example": 1
+          },
+          "description": "操作类型，1为点赞，2为文本评论，3为消息评论，4为with，5为陌生人点赞"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "description": "评论内容（当Type为2或3时有效）",
+            "type": "string",
+            "example": "好棒！"
+          },
+          "id": {
+            "description": "朋友圈内容ID",
+            "type": "string",
+            "example": "sns_001"
+          },
+          "replyCommentId": {
+            "description": "回复的评论ID（当Type为2或3时有效）",
+            "type": "integer",
+            "example": 0
+          },
+          "type": {
+            "description": "操作类型，1为点赞，2为文本评论，3为消息评论，4为with，5为陌生人点赞",
+            "type": "integer",
+            "example": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "content": "好棒！",
+        "id": "sns_001",
+        "replyCommentId": 0,
+        "type": 1
+      },
+      "response_description": "返回点赞或评论结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.get_detail",
+      "group": "sns",
+      "path": "/Sns/GetDetail",
+      "title": "获取特定人朋友圈",
+      "description": "获取指定用户的微信朋友圈动态",
+      "body_description": "查询参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "firstPageMd5",
+          "required": false,
+          "schema": {
+            "description": "首页MD5值，首次请求留空",
+            "type": "string",
+            "example": ""
+          },
+          "description": "首页MD5值，首次请求留空"
+        },
+        {
+          "name": "maxId",
+          "required": false,
+          "schema": {
+            "description": "最大朋友圈ID，首次请求填0",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "最大朋友圈ID，首次请求填0"
+        },
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "description": "目标用户微信ID",
+            "type": "string",
+            "example": "wxid_67890"
+          },
+          "description": "目标用户微信ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "firstPageMd5": {
+            "description": "首页MD5值，首次请求留空",
+            "type": "string",
+            "example": ""
+          },
+          "maxId": {
+            "description": "最大朋友圈ID，首次请求填0",
+            "type": "integer",
+            "example": 0
+          },
+          "toWxid": {
+            "description": "目标用户微信ID",
+            "type": "string",
+            "example": "wxid_67890"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "firstPageMd5": "",
+        "maxId": 0,
+        "toWxid": "wxid_67890"
+      },
+      "response_description": "返回特定用户的朋友圈列表",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.get_id_detail",
+      "group": "sns",
+      "path": "/Sns/GetIDDetail",
+      "title": "获取朋友圈内容详情",
+      "description": "获取指定朋友圈内容的详细信息",
+      "body_description": "查询参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "id",
+          "required": false,
+          "schema": {
+            "description": "朋友圈内容ID",
+            "type": "integer",
+            "example": 1001
+          },
+          "description": "朋友圈内容ID"
+        },
+        {
+          "name": "toWxid",
+          "required": false,
+          "schema": {
+            "description": "发布朋友圈的用户微信ID",
+            "type": "string",
+            "example": "wxid_67890"
+          },
+          "description": "发布朋友圈的用户微信ID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "朋友圈内容ID",
+            "type": "integer",
+            "example": 1001
+          },
+          "toWxid": {
+            "description": "发布朋友圈的用户微信ID",
+            "type": "string",
+            "example": "wxid_67890"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "id": 1001,
+        "toWxid": "wxid_67890"
+      },
+      "response_description": "返回朋友圈内容详情",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.get_list",
+      "group": "sns",
+      "path": "/Sns/GetList",
+      "title": "获取朋友圈首页列表",
+      "description": "获取微信朋友圈首页的动态列表",
+      "body_description": "列表参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "firstPageMd5",
+          "required": false,
+          "schema": {
+            "description": "首页MD5值，首次请求留空",
+            "type": "string",
+            "example": ""
+          },
+          "description": "首页MD5值，首次请求留空"
+        },
+        {
+          "name": "maxId",
+          "required": false,
+          "schema": {
+            "description": "最大朋友圈ID，首次请求填0",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "最大朋友圈ID，首次请求填0"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "firstPageMd5": {
+            "description": "首页MD5值，首次请求留空",
+            "type": "string",
+            "example": ""
+          },
+          "maxId": {
+            "description": "最大朋友圈ID，首次请求填0",
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "firstPageMd5": "",
+        "maxId": 0
+      },
+      "response_description": "返回朋友圈列表",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.post",
+      "group": "sns",
+      "path": "/Sns/Post",
+      "title": "发布朋友圈",
+      "description": "发布新的微信朋友圈内容",
+      "body_description": "发布参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "blackList",
+          "required": false,
+          "schema": {
+            "description": "黑名单用户微信ID列表，逗号分隔",
+            "type": "string",
+            "example": "wxid_111,wxid_222"
+          },
+          "description": "黑名单用户微信ID列表，逗号分隔"
+        },
+        {
+          "name": "content",
+          "required": false,
+          "schema": {
+            "description": "朋友圈内容，需自行构造XML",
+            "type": "string",
+            "example": "<xml><content>朋友圈文本</content></xml>"
+          },
+          "description": "朋友圈内容，需自行构造XML"
+        },
+        {
+          "name": "withUserList",
+          "required": false,
+          "schema": {
+            "description": "指定可见用户微信ID列表，逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          },
+          "description": "指定可见用户微信ID列表，逗号分隔"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "blackList": {
+            "description": "黑名单用户微信ID列表，逗号分隔",
+            "type": "string",
+            "example": "wxid_111,wxid_222"
+          },
+          "content": {
+            "description": "朋友圈内容，需自行构造XML",
+            "type": "string",
+            "example": "<xml><content>朋友圈文本</content></xml>"
+          },
+          "withUserList": {
+            "description": "指定可见用户微信ID列表，逗号分隔",
+            "type": "string",
+            "example": "wxid_67890,wxid_54321"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "blackList": "wxid_111,wxid_222",
+        "content": "<xml><content>朋友圈文本</content></xml>",
+        "withUserList": "wxid_67890,wxid_54321"
+      },
+      "response_description": "返回发布结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.sync",
+      "group": "sns",
+      "path": "/Sns/Sync",
+      "title": "朋友圈同步",
+      "description": "同步用户的微信朋友圈数据",
+      "body_description": "同步参数：syncKey为同步密钥（首次同步可留空）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "syncKey",
+          "required": false,
+          "schema": {
+            "description": "同步密钥，首次同步可留空",
+            "type": "string",
+            "example": ""
+          },
+          "description": "同步密钥，首次同步可留空"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "syncKey": {
+            "description": "同步密钥，首次同步可留空",
+            "type": "string",
+            "example": ""
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "syncKey": ""
+      },
+      "response_description": "返回同步结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.operation",
+      "group": "sns",
+      "path": "/Sns/Operation",
+      "title": "朋友圈操作",
+      "description": "对朋友圈内容执行操作（如删除、设置隐私等）",
+      "body_description": "操作参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "commentId",
+          "required": false,
+          "schema": {
+            "description": "评论ID（当Type为4时有效）",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "评论ID（当Type为4时有效）"
+        },
+        {
+          "name": "id",
+          "required": false,
+          "schema": {
+            "description": "朋友圈内容ID",
+            "type": "string",
+            "example": "sns_001"
+          },
+          "description": "朋友圈内容ID"
+        },
+        {
+          "name": "type",
+          "required": false,
+          "schema": {
+            "description": "操作类型，1为删除朋友圈，2为设为隐私，3为设为公开，4为删除评论，5为取消点赞",
+            "type": "integer",
+            "example": 1
+          },
+          "description": "操作类型，1为删除朋友圈，2为设为隐私，3为设为公开，4为删除评论，5为取消点赞"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "description": "评论ID（当Type为4时有效）",
+            "type": "integer",
+            "example": 0
+          },
+          "id": {
+            "description": "朋友圈内容ID",
+            "type": "string",
+            "example": "sns_001"
+          },
+          "type": {
+            "description": "操作类型，1为删除朋友圈，2为设为隐私，3为设为公开，4为删除评论，5为取消点赞",
+            "type": "integer",
+            "example": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "commentId": 0,
+        "id": "sns_001",
+        "type": 1
+      },
+      "response_description": "返回操作结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.privacy_settings",
+      "group": "sns",
+      "path": "/Sns/PrivacySettings",
+      "title": "朋友圈权限设置",
+      "description": "设置微信朋友圈的权限",
+      "body_description": "设置参数",
+      "sending": false,
+      "fields": [
+        {
+          "name": "function",
+          "required": false,
+          "schema": {
+            "description": "功能代码，具体值需联系客服获取",
+            "type": "integer",
+            "example": 1
+          },
+          "description": "功能代码，具体值需联系客服获取"
+        },
+        {
+          "name": "value",
+          "required": false,
+          "schema": {
+            "description": "设置值，具体含义由功能代码决定",
+            "type": "integer",
+            "example": 0
+          },
+          "description": "设置值，具体含义由功能代码决定"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "function": {
+            "description": "功能代码，具体值需联系客服获取",
+            "type": "integer",
+            "example": 1
+          },
+          "value": {
+            "description": "设置值，具体含义由功能代码决定",
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "function": 1,
+        "value": 0
+      },
+      "response_description": "返回设置结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "sns.upload",
+      "group": "sns",
+      "path": "/Sns/Upload",
+      "title": "朋友圈上传",
+      "description": "上传图片或视频到微信朋友圈",
+      "body_description": "上传参数：base64为图片或视频的base64编码数据",
+      "sending": false,
+      "fields": [
+        {
+          "name": "base64",
+          "required": false,
+          "schema": {
+            "description": "图片或视频的Base64编码数据",
+            "type": "string",
+            "example": "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+          },
+          "description": "图片或视频的Base64编码数据"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "base64": {
+            "description": "图片或视频的Base64编码数据",
+            "type": "string",
+            "example": "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "base64": "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+      },
+      "response_description": "返回上传结果",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "user.get_contact_profile",
+      "group": "user",
+      "path": "/User/GetContactProfile",
+      "title": "获取个人信息",
+      "description": "获取用户的微信个人信息",
+      "body_description": "",
+      "sending": false,
+      "fields": [],
+      "schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {},
+      "response_description": "返回个人信息，Data包含用户资料",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "user.get_qrcode",
+      "group": "user",
+      "path": "/User/GetQRCode",
+      "title": "获取个人二维码",
+      "description": "获取用户的微信个人二维码",
+      "body_description": "查询参数：style为二维码样式（8为默认样式）",
+      "sending": false,
+      "fields": [
+        {
+          "name": "style",
+          "required": false,
+          "schema": {
+            "description": "二维码样式，8为默认样式",
+            "type": "integer",
+            "example": 8
+          },
+          "description": "二维码样式，8为默认样式"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "style": {
+            "description": "二维码样式，8为默认样式",
+            "type": "integer",
+            "example": 8
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "style": 8
+      },
+      "response_description": "返回二维码数据",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    },
+    {
+      "name": "wxapp.query_app",
+      "group": "wxapp",
+      "path": "/WxApp/QueryApp",
+      "title": "搜索已授权的APP",
+      "description": "搜索用户已授权的微信APP",
+      "body_description": "查询参数：appId为APP的AppID",
+      "sending": false,
+      "fields": [
+        {
+          "name": "appId",
+          "required": false,
+          "schema": {
+            "description": "小程序的AppID",
+            "type": "string",
+            "example": "wxa_001"
+          },
+          "description": "小程序的AppID"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "description": "小程序的AppID",
+            "type": "string",
+            "example": "wxa_001"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "example": {
+        "appId": "wxa_001"
+      },
+      "response_description": "返回已授权APP信息",
+      "response_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {},
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "return_note": "统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。"
+    }
+  ],
+  "counts": {
+    "business": 85,
+    "total": 85
+  }
+}
