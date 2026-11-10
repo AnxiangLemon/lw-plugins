@@ -13,6 +13,8 @@ type Options struct {
 	Key           string `json:"idempotency_key,omitempty"`
 	SourceEventID string `json:"source_event_id,omitempty"`
 	WaitTimeoutMS int    `json:"wait_timeout_ms,omitempty"`
+	// nil 沿用宿主默认等待；指向 false 可让 Call/Send 只提交、不等待执行完成。
+	Wait *bool `json:"wait,omitempty"`
 }
 
 // NewKey 生成不含业务含义的随机幂等键。一个动作只生成一次，并与本地任务一起保存。
@@ -40,6 +42,7 @@ func NewWechat(client Caller, account string) Wechat {
 	return Wechat{client: client, AccountID: account}
 }
 
+// Wechat 返回当前账号的微信调用句柄；不会建立额外连接。
 func (c *Client) Wechat(account string) Wechat { return Wechat{client: c, AccountID: account} }
 func (w Wechat) invoke(ctx context.Context, action, method string, params any, opts Options) (Result, error) {
 	if w.AccountID == "" {
@@ -47,6 +50,9 @@ func (w Wechat) invoke(ctx context.Context, action, method string, params any, o
 	}
 	if opts.Key == "" {
 		opts.Key = NewKey()
+	}
+	if opts.SourceEventID == "" {
+		opts.SourceEventID = scopeFrom(ctx).id
 	}
 	if params == nil {
 		params = map[string]any{}
@@ -85,13 +91,32 @@ func (w Wechat) Submit(ctx context.Context, method string, params any, opts Opti
 func (w Wechat) Send(ctx context.Context, to string, segments []Segment, opts Options) (Result, error) {
 	return w.invoke(ctx, "wechat.send", "", map[string]any{"to": to, "segments": segments}, opts)
 }
+
+// SendText 是单个文本消息段的便捷封装，幂等与回执规则同 Send。
 func (w Wechat) SendText(ctx context.Context, to, text string, opts Options) (Result, error) {
 	return w.Send(ctx, to, []Segment{Text(text)}, opts)
 }
+
+// Methods 查询宿主当前公开的方法目录，不在 SDK 内复制一份接口白名单。
 func (w Wechat) Methods(ctx context.Context) (json.RawMessage, error) {
+	if w.AccountID == "" {
+		return nil, errors.New("account_id 不能为空")
+	}
 	var data json.RawMessage
 	err := w.client.Request(ctx, "wechat.methods", map[string]any{"account_id": w.AccountID}, &data)
 	return data, err
+}
+
+// SendImage 读取插件机器上的图片，不把路径发送给宿主；需要时由业务先准备 CDN DNS。
+func (w Wechat) SendImage(ctx context.Context, to, path string, opts Options) (Result, error) {
+	if err := ctx.Err(); err != nil {
+		return Result{}, err
+	}
+	segment, err := ImageFile(path)
+	if err != nil {
+		return Result{}, err
+	}
+	return w.Send(ctx, to, []Segment{segment}, opts)
 }
 
 // Query 强制使用当前账号，filters 中的 account_id 不能覆盖作用域。

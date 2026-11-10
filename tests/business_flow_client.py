@@ -20,8 +20,8 @@ class ReconnectPlugin(Plugin):
     def __init__(self):
         super().__init__('test.reconnect',url=os.environ['LW_MOCK_WS_URL'],token=os.environ['LW_MOCK_WS_TOKEN'],reconnect=False)
         self.ready=asyncio.Event()
-    async def _on_hello_ok(self,frame):
-        await super()._on_hello_ok(frame);self.ready.set()
+        self.on_connect(lambda host: self.ready.set())
+        self.on_disconnect(lambda error: self.ready.clear())
 
 async def reconnect_flow():
     first=ReconnectPlugin();task=asyncio.create_task(first.run_async());await first.ready.wait()

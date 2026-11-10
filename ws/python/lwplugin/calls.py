@@ -1,8 +1,9 @@
-"""Owner-scoped queries for the generic message call ledger."""
+"""通用平台调用账本：限定插件、账号和平台；宿主不提供通用 calls.wait。"""
 from .wechat import result
 
 
 class Calls:
+    """Telegram 等平台的 get/find/detail/list/queue 查询，不发起业务重试。"""
     def __init__(self, plugin, account_id, platform="telegram"):
         if not account_id:
             raise ValueError("account_id is required")

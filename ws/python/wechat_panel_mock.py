@@ -44,7 +44,9 @@ async def start_mock(catalog, calls=None, sample_message=False):
             for socket in tuple(sockets):
                 if not socket.closed: await socket.send_json(event)
     async def handler(request):
-        if request.query.get('token') != 'panel-demo-only': raise web.HTTPUnauthorized()
+        # 与真实宿主一致：优先使用 Header，同时兼容旧客户端的查询串认证。
+        token = request.headers.get('Authorization', '').removeprefix('Bearer ') or request.query.get('token')
+        if token != 'panel-demo-only': raise web.HTTPUnauthorized()
         ws = web.WebSocketResponse()
         await ws.prepare(request)
         sockets.add(ws)
@@ -54,7 +56,7 @@ async def start_mock(catalog, calls=None, sample_message=False):
                 frame = json.loads(message.data)
                 kind = frame.get('type')
                 if kind == 'hello':
-                    await ws.send_json({'v':2,'type':'hello.ok','plugin_id':frame['plugin_id'],'host_version':'panel-mock','events':[]})
+                    await ws.send_json({'v':2,'type':'hello.ok','plugin_id':frame['plugin_id'],'host_version':'panel-mock','events':['wechat.message.received']})
                 elif kind == 'subscribe':
                     await ws.send_json({'v':2,'type':'subscribe.ok','events':frame.get('events',[])})
                     subscribed.set()

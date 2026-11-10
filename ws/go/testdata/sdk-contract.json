@@ -1,0 +1,146 @@
+{
+  "events": [
+    "wechat.group.refresh_hint",
+    "wechat.sync.hint",
+    "wechat.message.received",
+    "wechat.message.sent",
+    "wechat.call.updated",
+    "wechat.message.filter",
+    "message.received",
+    "message.sent",
+    "account.online",
+    "account.offline"
+  ],
+  "segments": [
+    {
+      "type": "text",
+      "data": {
+        "text": "你好"
+      }
+    },
+    {
+      "type": "at",
+      "data": {
+        "target_id": "wxid_fixture"
+      }
+    },
+    {
+      "type": "image",
+      "data": {
+        "source": {
+          "kind": "base64",
+          "base64": "AA=="
+        }
+      }
+    },
+    {
+      "type": "voice",
+      "data": {
+        "base64": "AA==",
+        "type": 4,
+        "voiceTime": 1000
+      }
+    },
+    {
+      "type": "video",
+      "data": {
+        "base64": "AA==",
+        "imageBase64": "AQ=="
+      }
+    },
+    {
+      "type": "file",
+      "data": {
+        "base64": "AA==",
+        "fileName": "说明.txt"
+      }
+    },
+    {
+      "type": "wechat",
+      "data": {
+        "method": "msg.send_text_message",
+        "params": {
+          "content": "你好"
+        }
+      }
+    }
+  ],
+  "event": {
+    "type": "event",
+    "event": "message.sent",
+    "event_id": "same-id",
+    "trace_id": "trace-1",
+    "call_id": "call-1",
+    "account": {
+      "platform": "wechat",
+      "id": "wxid_fixture"
+    },
+    "received_at": 1794312000,
+    "delivery": {
+      "outbox_id": 9223372036854775807,
+      "call_id": "call-1",
+      "part": 0,
+      "provider_message_id": "18446744073709551615"
+    },
+    "status": {
+      "reason": "fixture"
+    },
+    "result": {
+      "status": "succeeded",
+      "call_id": "call-1"
+    },
+    "future": {
+      "value": 18446744073709551615
+    }
+  },
+  "result": {
+    "call_id": "call-1",
+    "status": "partial",
+    "revision": 4,
+    "outbox_id": 9223372036854775807,
+    "delivered": false,
+    "details_expired": true,
+    "data": {
+      "id": 18446744073709551615
+    },
+    "raw": {
+      "code": 0
+    },
+    "future": "preserve"
+  },
+  "endpoint": {
+    "url": "wss://[::1]:8443/plugin/ws?mode=1&token=url-secret",
+    "token": "header-secret",
+    "clean_url": "wss://[::1]:8443/plugin/ws?mode=1"
+  },
+  "rpc": [
+    "platform.list",
+    "accounts.list",
+    "db.query_messages",
+    "db.list_peers",
+    "db.chat_stats",
+    "settings.get",
+    "settings.set",
+    "settings.all",
+    "wechat.methods",
+    "wechat.call",
+    "wechat.submit",
+    "wechat.send",
+    "wechat.calls.get",
+    "wechat.calls.find",
+    "wechat.calls.detail",
+    "wechat.calls.list",
+    "wechat.calls.queue",
+    "wechat.calls.wait",
+    "wechat.events.cursor",
+    "wechat.events.poll",
+    "wechat.events.ack",
+    "wechat.filters.register",
+    "wechat.filters.decide",
+    "calls.get",
+    "calls.find",
+    "calls.detail",
+    "calls.list",
+    "calls.queue"
+  ]
+}

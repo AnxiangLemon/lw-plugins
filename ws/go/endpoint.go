@@ -101,6 +101,12 @@ func checkedEndpoint(address, token string) (Endpoint, error) {
 	if err != nil || u.Hostname() == "" || (u.Scheme != "ws" && u.Scheme != "wss") || u.User != nil || u.Fragment != "" {
 		return Endpoint{}, errors.New("插件地址必须是有效的 ws:// 或 wss:// 地址")
 	}
+	if port := u.Port(); port != "" {
+		number, err := strconv.Atoi(port)
+		if err != nil || number < 1 || number > 65535 {
+			return Endpoint{}, errors.New("插件端口必须在 1..65535 范围内")
+		}
+	}
 	// 兼容已有带 token 的 URL，但实际握手改走 Header，避免 URL 错误日志泄漏。
 	q := u.Query()
 	if token == "" {

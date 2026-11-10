@@ -32,7 +32,7 @@ python -m venv .venv
 python -m pip install -e './ws/python[panel]'
 ```
 
-SDK 当前版本为 2.1.0，要求 Python 3.9+、宿主 WS 协议 v2。可编辑安装后，修改 `ws/python/lwplugin/` 立即生效；更新 SDK 后需重启正在运行的插件进程。
+SDK 当前版本为 2.4.0，要求 Python 3.9+、宿主 WS 协议 v2。可编辑安装后，修改 `ws/python/lwplugin/` 立即生效；更新 SDK 后需重启正在运行的插件进程。
 
 只安装基础 SDK 可使用 `python -m pip install -e ./ws/python`。兼容入口 `python -m pip install -r ws/python/requirements.txt` 必须在仓库根目录执行。
 
@@ -43,7 +43,7 @@ python -m unittest discover -s ws/python/tests -v
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-SDK 测试覆盖业务调用、事件确认、错误日志和多平台 WS 行为。面板测试使用本地模拟宿主，覆盖全部 164 个接口入口、账号选择、参数校验、实时消息、JSON 精度、异步回执、业务失败和跨来源请求；目录生成器测试验证公开方法范围与字段转换。这些测试不需要实际账号或运行中的宿主。
+SDK 测试覆盖业务调用、事件确认、错误日志和多平台 WS 行为。Go / Python 共用 `ws/go/testdata/sdk-contract.json`，新增协议请同时更新两端实现和[协议对照](sdk-parity.md)。面板测试使用本地模拟宿主，覆盖全部 164 个接口入口、账号选择、参数校验、实时消息、JSON 精度、异步回执、业务失败和跨来源请求；目录生成器测试验证公开方法范围与字段转换。这些测试不需要实际账号或运行中的宿主。
 
 ## 调试插件
 

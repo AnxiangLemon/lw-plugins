@@ -63,7 +63,7 @@ python ws/python/wechat_panel.py --demo
 | --- | --- |
 | LW 宿主 | 支持微信插件协议 v2；使用 Lua 时提供 Lua 插件运行环境 |
 | Python | 3.9 或更新版本 |
-| `lwplugin` | 2.1.0，源码位于 [ws/python/lwplugin](ws/python/lwplugin) |
+| `lwplugin` | 2.4.0，源码位于 [ws/python/lwplugin](ws/python/lwplugin) |
 | Python 依赖 | SDK 安装时自动安装；`panel` 可选依赖包含面板所需包 |
 
 Lua 由宿主直接加载，不需要单独安装 Lua。Python 示例运行在独立进程中；模拟面板只需本仓库与 Python 环境。宿主配置示例见 [lwcli.example.toml](examples/lwcli.example.toml)，请按宿主版本调整后使用。
@@ -169,3 +169,5 @@ Desktop 插件页的“打开日志”可定位宿主日志；Python traceback �
 ## 许可证
 
 本仓库采用 [MIT License](LICENSE)。
+
+两套语言 SDK 的接口、全部事件、回执语义与源码发布方式见 [Go / Python SDK 协议对照](docs/sdk-parity.md)。

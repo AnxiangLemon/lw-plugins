@@ -104,6 +104,8 @@ class PanelPlugin(Plugin):
         self.ready = asyncio.Event()
         self.viewers = set()
         self.on('wechat.message.received', self.forward_message)
+        self.on_connect(lambda host: self.ready.set())
+        self.on_disconnect(lambda error: self.ready.clear())
 
     async def forward_message(self, event):
         for viewer in tuple(self.viewers):
@@ -113,16 +115,6 @@ class PanelPlugin(Plugin):
                 self.viewers.discard(viewer)
                 await viewer.close()
 
-    async def _on_hello_ok(self, frame):
-        await super()._on_hello_ok(frame)
-        self.ready.set()
-
-    async def _session(self):
-        self.ready.clear()
-        try:
-            await super()._session()
-        finally:
-            self.ready.clear()
 
 
 def supported_names(value):

@@ -78,7 +78,7 @@ accepted = await wx.submit(
 result = await wx.calls.wait(accepted.call_id)
 ```
 
-可运行的插件入口及媒体、群公告、朋友圈、公众号示例见 [wechat_business.py](../ws/python/wechat_business.py)。
+可运行的插件入口及媒体、群公告、朋友圈、公众号示例见 [wechat_business.py](../ws/python/wechat_business.py)。本地图片发送和原回执等待见 [Python SDK](../ws/python/README.md#主动调用与本地图片)。
 
 ## 理解调用结果
 

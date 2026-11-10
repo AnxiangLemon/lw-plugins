@@ -1,5 +1,6 @@
 """lwplugin —— LW Tools WS 异步订阅插件的 Python SDK。"""
 
+from .wechat import Result, Wechat, new_key
 from .client import Context, Plugin, PluginError
 from .endpoint import Endpoint, EndpointNotFound, load_endpoint
 from .events import (
@@ -8,14 +9,19 @@ from .events import (
     ALL_EVENTS,
     MESSAGE_RECEIVED,
     MESSAGE_SENT,
+    MESSAGE_FILTER,
     WECHAT_MESSAGE_RECEIVED,
     WECHAT_MESSAGE_SENT,
     CALL_UPDATED,
     GROUP_REFRESH_HINT,
     SYNC_HINT,
     Event,
+    GroupHint,
+    SyncMetadata,
+    HostInfo,
     at_segment,
     image_segment,
+    image_file_segment,
     voice_segment,
     video_segment,
     file_segment,
@@ -23,14 +29,16 @@ from .events import (
     text_segment,
 )
 
-__version__ = "2.1.0"
+__version__ = "2.4.0"
 
 __all__ = [
+    "Result", "Wechat", "new_key",
     "ACCOUNT_OFFLINE",
     "ACCOUNT_ONLINE",
     "ALL_EVENTS",
     "MESSAGE_RECEIVED",
     "MESSAGE_SENT",
+    "MESSAGE_FILTER",
     "WECHAT_MESSAGE_RECEIVED",
     "WECHAT_MESSAGE_SENT",
     "CALL_UPDATED",
@@ -40,10 +48,14 @@ __all__ = [
     "Endpoint",
     "EndpointNotFound",
     "Event",
+    "GroupHint",
+    "SyncMetadata",
+    "HostInfo",
     "Plugin",
     "PluginError",
     "at_segment",
     "image_segment",
+    "image_file_segment",
     "load_endpoint",
     "voice_segment",
     "video_segment",

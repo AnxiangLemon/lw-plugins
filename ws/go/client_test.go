@@ -39,7 +39,7 @@ func endpointServer(t *testing.T, serve func(*websocket.Conn)) *httptest.Server 
 		if hello["type"] != "hello" || hello["plugin_id"] != "test.go" {
 			t.Error("错误的 hello")
 		}
-		conn.WriteJSON(map[string]any{"v": 2, "type": "hello.ok", "host_version": "test", "events": []string{GroupRefreshHint, CallUpdated}, "capabilities": []string{"wechat.v2"}})
+		conn.WriteJSON(map[string]any{"v": 2, "type": "hello.ok", "host_version": "test", "events": AllEvents(), "capabilities": []string{"wechat.v2"}})
 		var subscribe map[string]any
 		if conn.ReadJSON(&subscribe) != nil {
 			return

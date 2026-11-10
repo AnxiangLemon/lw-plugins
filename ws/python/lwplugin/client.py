@@ -1,4 +1,4 @@
-"""WS client. WeChat v2 events replay after reconnect until acknowledged."""
+"""WS 客户端：订阅分发、按账号调用、重连恢复及持久化事件确认。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import inspect
 import json
 import logging
 import traceback
-from uuid import uuid4
+from contextlib import asynccontextmanager
 from collections import OrderedDict
 from contextvars import ContextVar
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
@@ -15,9 +15,9 @@ from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Seq
 import websockets
 
 from .endpoint import Endpoint, load_endpoint
-from .wechat import Wechat, source_event
+from .wechat import Wechat, source_event, new_key
 from .calls import Calls
-from .events import ALL_EVENTS, MESSAGE_RECEIVED, Event, text_segment
+from .events import ALL_EVENTS, MESSAGE_RECEIVED, GROUP_REFRESH_HINT, SYNC_HINT, MESSAGE_FILTER, Event, HostInfo, text_segment
 
 LOGGER = logging.getLogger("lwplugin")
 
@@ -34,6 +34,10 @@ class PluginError(RuntimeError):
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = message
+        self.call_id = None
+        self.status = None
+        self.idempotency_key = None
+        self.account_id = None
 
 
 class Context:
@@ -54,16 +58,21 @@ class Context:
         if segments is None:
             if text is None: raise ValueError("either text or segments is required")
             segments = [text_segment(text)]
+        if not event.event_id:
+            raise ValueError("reply requires event_id")
         if event.platform and event.platform != "wechat":
-            if not event.event_id:
-                raise ValueError("reply requires event_id")
             event.raw["_reply_index"] = event.raw.get("_reply_index", 0) + 1
-            return await self._plugin._action("reply", event_id=event.event_id, platform=event.platform, segments=segments,
-                idempotency_key=idempotency_key or f"reply:{event.event_id}:{event.raw['_reply_index']}")
+            try:
+                return await self._plugin._action("reply", event_id=event.event_id, platform=event.platform, segments=segments,
+                    idempotency_key=idempotency_key or f"reply:{event.event_id}:{event.raw['_reply_index']}")
+            except PluginError as exc:
+                exc.account_id = event.account_id
+                raise
         if event.platform == "wechat":
             event.raw["_reply_index"] = event.raw.get("_reply_index", 0) + 1
             return await self._plugin.wechat(event.account_id).send(event.peer, segments,
-                idempotency_key=idempotency_key or f"reply:{event.event_id}:{event.raw['_reply_index']}")
+                idempotency_key=idempotency_key or f"reply:{event.event_id}:{event.raw['_reply_index']}",
+                source_event_id=event.event_id)
         raise ValueError(f"unsupported reply platform: {event.platform or '<missing>'}")
 
     def wechat(self, account_id):
@@ -112,7 +121,10 @@ class Plugin:
         dedupe_size: int = 2048,
         max_concurrency: int = 32,
         request_timeout: Optional[float] = 70.0,
+        handshake_timeout: float = 10.0,
     ) -> None:
+        if not plugin_id or len(plugin_id) > 64 or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-" for c in plugin_id):
+            raise ValueError("plugin_id must contain 1..64 ASCII letters, digits, dots, underscores or hyphens")
         self.plugin_id = plugin_id
         self.title = title or plugin_id
         self.version = version
@@ -145,6 +157,81 @@ class Plugin:
         self._durable_lock = asyncio.Lock()
         self._filters = []
         self.host_capabilities = frozenset()
+        self._ready = asyncio.Event()
+        self._managed_session: Optional[asyncio.Task] = None
+        self._connect_handlers: List[Callable] = []
+        self._disconnect_handlers: List[Callable] = []
+        self._initialization: Optional[asyncio.Task] = None
+        self._connection_error: Optional[BaseException] = None
+        self._session_running = False
+        self._running = False
+        self._stopped = asyncio.Event()
+        if handshake_timeout <= 0:
+            raise ValueError("handshake_timeout must be positive")
+        self._handshake_timeout = handshake_timeout
+        self._subscription_accepted = False
+        # 会话开始后暂缓事件分发，订阅确认和初始化完成后才放行。
+        self._events_ready = asyncio.Event()
+        self._events_ready.set()
+        self._hint_lock = asyncio.Lock()
+        self._hint_tail: Optional[asyncio.Task] = None
+        self._durable_tail: Optional[asyncio.Task] = None
+
+    @property
+    def host(self) -> HostInfo:
+        return HostInfo(self.host_version, tuple(self.host_events), tuple(sorted(self.host_capabilities)))
+
+    @property
+    def connected(self) -> bool:
+        return self._ws is not None and self._subscription_accepted
+
+    def on_connect(self, handler=None):
+        """注册每次连接/重连的初始化：handler(host, ctx)，也支持只接收 host。
+
+        在订阅确认之后、事件处理之前执行，可以 await ctx.api 查询成员快照。
+        回调运行在后台，不占用 RPC 接收循环；失败会断开连接，交给重连恢复。
+        """
+        return self._register_lifecycle(self._connect_handlers, handler)
+
+    def on_disconnect(self, handler=None):
+        """会话结束后通知 handler(error, ctx)；主动正常关闭时 error 为 None。"""
+        return self._register_lifecycle(self._disconnect_handlers, handler)
+
+    def _register_lifecycle(self, handlers, handler):
+        if handler is not None:
+            handlers.append(handler)
+            return self
+        def register(callback):
+            handlers.append(callback)
+            return callback
+        return register
+
+    async def _invoke_lifecycle(self, handlers, value):
+        for handler in handlers:
+            parameters = inspect.signature(handler).parameters
+            result = handler(value) if len(parameters) == 1 else handler(value, self._context)
+            if inspect.isawaitable(result):
+                await result
+
+    def _start_initialization(self):
+        if self._initialization is not None:
+            return
+        self._subscription_accepted = True
+        self._initialization = asyncio.create_task(self._initialize_connection())
+
+    async def _initialize_connection(self):
+        try:
+            await self._invoke_lifecycle(self._connect_handlers, self.host)
+            if self._ws is not None and not self._closing:
+                self._events_ready.set()
+                self._ready.set()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            self._connection_error = exc
+            LOGGER.exception("connection initialization failed")
+            if self._ws is not None:
+                await self._ws.close()
 
     def wechat(self, account_id):
         return Wechat(self, account_id)
@@ -153,7 +240,7 @@ class Plugin:
         return Calls(self, account_id, self._event_platform.get() if platform is None else platform)
 
     def filter(self, handler):
-        """Explicit, bounded inbound prefilter. Return plugin.stop(reason) to stop dispatch."""
+        """显式参与微信过滤链；返回 plugin.stop(reason) 拦截后续插件。"""
         self._filters.append(handler)
         return handler
 
@@ -177,6 +264,8 @@ class Plugin:
             @plugin.on("account.online")
             async def on_online(event, ctx): ...
         """
+        if event_name == MESSAGE_FILTER:
+            raise ValueError("use plugin.filter for wechat.message.filter")
         if event_name not in ALL_EVENTS:
             raise ValueError(f"unknown event: {event_name}")
 
@@ -198,6 +287,44 @@ class Plugin:
 
     # ── 运行 ──
 
+    @asynccontextmanager
+    async def connect(self, *, timeout: float = 15.0):
+        """主动调用场景：建立一次连接，握手/订阅成功后才进入 async with。
+
+        接收循环在后台持续处理 RPC 回执；退出上下文自动断开并回收任务。
+        本接口不会自动重连或重发业务请求。长期事件插件仍使用 run/run_async。
+        同一个实例不能同时由 connect 和其他接收循环管理。
+        """
+        if timeout <= 0:
+            raise ValueError("connect timeout must be positive")
+        if self._managed_session is not None or self._session_running or self._running:
+            raise PluginError("already_connected", "plugin already has an active session")
+        self._closing = False
+        self._stopped.clear()
+        self._ready.clear()
+        reader = asyncio.create_task(self._session())
+        self._managed_session = reader
+        ready = asyncio.create_task(self._ready.wait())
+        try:
+            done, _ = await asyncio.wait(
+                {reader, ready}, timeout=timeout, return_when=asyncio.FIRST_COMPLETED
+            )
+            if reader in done:
+                # 优先传播连接/握手错误，不能把一个已经关闭的会话当作可用连接。
+                reader.result()
+                raise PluginError("disconnected", "host closed connection before ready")
+            if ready not in done:
+                raise PluginError("timeout", "host handshake or subscription timed out")
+            yield self
+        finally:
+            ready.cancel()
+            try:
+                await self.close()
+            finally:
+                reader.cancel()
+                await asyncio.gather(ready, reader, return_exceptions=True)
+                self._managed_session = None
+
     def run(self) -> None:
         """阻塞运行，Ctrl-C 退出。"""
         try:
@@ -206,23 +333,40 @@ class Plugin:
             LOGGER.info("plugin stopped by user")
 
     async def run_async(self) -> None:
+        """持续连接，按 1..30 秒退避；稳定连接一分钟后重置退避。"""
+        if self._running or self._managed_session is not None or self._session_running:
+            raise PluginError("already_connected", "plugin already has an active runner")
+        self._running = True
+        self._closing = False
+        self._stopped.clear()
         backoff = 1.0
-        while not self._closing:
-            try:
-                await self._session()
-                backoff = 1.0
-            except Exception as exc:  # noqa: BLE001 - 顶层循环必须吞掉一切以便重连
-                if self._closing:
+        loop = asyncio.get_running_loop()
+        try:
+            while not self._closing:
+                started = loop.time()
+                try:
+                    await self._session()
+                except Exception as exc:
+                    if self._closing:
+                        break
+                    LOGGER.warning("connection lost: %s", exc)
+                if not self.reconnect or self._closing:
                     break
-                LOGGER.warning("connection lost: %s", exc)
-            if not self.reconnect or self._closing:
-                break
-            LOGGER.info("reconnecting in %.0fs", backoff)
-            await asyncio.sleep(backoff)
-            backoff = min(backoff * 2, 30.0)
+                if loop.time() - started > 60:
+                    backoff = 1.0
+                LOGGER.info("reconnecting in %.0fs", backoff)
+                try:
+                    await asyncio.wait_for(self._stopped.wait(), backoff)
+                except asyncio.TimeoutError:
+                    pass
+                backoff = min(backoff * 2, 30.0)
+        finally:
+            self._running = False
 
     async def close(self) -> None:
         self._closing = True
+        self._stopped.set()
+        self._ready.clear()
         if self._ws is not None:
             await self._ws.close()
             self._ws = None
@@ -230,8 +374,9 @@ class Plugin:
 
     async def _drain_tasks(self) -> None:
         """断线后取消在飞的处理任务：它们的 reply/api 已经无处投递。"""
-        tasks = list(self._tasks)
-        self._tasks.clear()
+        # 允许处理器调用 close，不能让任务取消并等待自身。
+        tasks = [task for task in self._tasks if task is not asyncio.current_task()]
+        self._tasks.difference_update(tasks)
         for task in tasks:
             task.cancel()
         if tasks:
@@ -240,39 +385,84 @@ class Plugin:
     # ── 会话 ──
 
     async def _session(self) -> None:
+        if self._session_running:
+            raise PluginError("already_connected", "plugin already has an active session")
+        self._session_running = True
+        self._ready.clear()
+        self._events_ready.clear()
+        self._connection_error = None
+        self._subscription_accepted = False
+        self._hint_tail = None
+        self._durable_tail = None
+        try:
+            await self._serve_session()
+            if self._connection_error is not None:
+                raise self._connection_error
+            if not self._closing:
+                self._connection_error = PluginError("disconnected", "host closed connection")
+        except BaseException as exc:
+            self._connection_error = exc
+            raise
+        finally:
+            self._ready.clear()
+            self._events_ready.clear()
+            self._subscription_accepted = False
+            self._ws = None
+            self._fail_pending("connection closed")
+            # 先摘除引用，再等待取消，防止关闭期间再次收到取消留下旧初始化状态。
+            initialization, self._initialization = self._initialization, None
+            try:
+                if initialization is not None:
+                    initialization.cancel()
+                    await asyncio.gather(initialization, return_exceptions=True)
+                await self._drain_tasks()
+            finally:
+                try:
+                    await self._invoke_lifecycle(self._disconnect_handlers, None if self._closing else self._connection_error)
+                except Exception:
+                    LOGGER.exception("disconnect handler failed")
+                finally:
+                    self._session_running = False
+
+    async def _serve_session(self) -> None:
         endpoint: Endpoint = load_endpoint(
             url=self._explicit_url,
             token=self._explicit_token,
             endpoint_file=self._endpoint_file,
         )
         self._slots = asyncio.Semaphore(self._max_concurrency)
-        # 令牌走查询串而不是 Authorization 头：不同 websockets 版本的
-        # 自定义头参数名不一致，查询串在所有版本上都能用。
-        try:
-            async with websockets.connect(
-                # CallResult preserves both data and raw: a 32 MiB download
-                # appears twice after Base64 encoding in a single result frame.
-                endpoint.url_with_token(), max_size=128 * 1024 * 1024
-            ) as ws:
-                self._ws = ws
-                self._fail_pending("connection restarted")
-                hello: Dict[str, Any] = {
-                    "v": PROTOCOL_VERSION,
-                    "type": "hello",
-                    "plugin_id": self.plugin_id,
-                    "title": self.title,
-                    "version": self.version,
-                    "description": self.description,
-                }
-                await self._send(hello)
-                async for raw in ws:
-                    if isinstance(raw, bytes):
-                        continue
+        # websockets 12/13 使用 extra_headers，14/15 默认 asyncio 实现改名为
+        # additional_headers。按公开签名适配，统一走 Header，避免日志泄露 URL token。
+        header_name = "additional_headers" if "additional_headers" in inspect.signature(websockets.connect).parameters else "extra_headers"
+        auth = {header_name: {"Authorization": f"Bearer {endpoint.token}"}}
+        async with websockets.connect(
+            # CallResult preserves both data and raw: a 32 MiB download
+            # appears twice after Base64 encoding in a single result frame.
+            endpoint.url, max_size=128 * 1024 * 1024, open_timeout=self._handshake_timeout, **auth
+        ) as ws:
+            self._ws = ws
+            self._fail_pending("connection restarted")
+            hello: Dict[str, Any] = {
+                "v": PROTOCOL_VERSION,
+                "type": "hello",
+                "plugin_id": self.plugin_id,
+                "title": self.title,
+                "version": self.version,
+                "description": self.description,
+            }
+            await self._send(hello)
+            deadline = asyncio.get_running_loop().time() + self._handshake_timeout
+            while not self._subscription_accepted:
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), max(0, deadline - asyncio.get_running_loop().time()))
+                except asyncio.TimeoutError:
+                    raise PluginError("timeout", "host handshake or subscription timed out") from None
+                if isinstance(raw, str):
                     await self._dispatch_frame(json.loads(raw))
-        finally:
-            self._ws = None
-            self._fail_pending("connection closed")
-            await self._drain_tasks()
+            async for raw in ws:
+                if isinstance(raw, bytes):
+                    continue
+                await self._dispatch_frame(json.loads(raw))
 
     async def _dispatch_frame(self, frame: Dict[str, Any]) -> None:
         kind = frame.get("type")
@@ -286,10 +476,18 @@ class Plugin:
             self._resolve_pending(frame)
         elif kind == "subscribe.ok":
             LOGGER.info("subscribed: %s", frame.get("events"))
+            self._start_initialization()
         elif kind == "error":
+            # error.ref 是请求级失败，必须立即唤醒对应 Future，不能等到超时。
+            if frame.get("ref") in self._pending:
+                self._resolve_pending(frame)
+                return
+            if not self._ready.is_set():
+                raise PluginError(frame.get("code") or "handshake_failed",
+                                  frame.get("message") or "host rejected connection or subscription")
             LOGGER.warning("host error [%s] %s", frame.get("code"), frame.get("message"))
         elif kind == "bye":
-            LOGGER.info("host closed connection: %s", frame.get("reason"))
+            raise PluginError("disconnected", frame.get("reason") or "host closed connection")
         else:
             LOGGER.debug("ignoring unknown frame: %s", kind)
 
@@ -298,13 +496,14 @@ class Plugin:
         self.host_version = frame.get("host_version", "")
         self.host_events = list(frame.get("events") or [])
         LOGGER.info("connected to host %s", self.host_version)
-        # 宿主默认只订上 message.received，其他事件必须显式订阅。
-        # 没有任何处理函数时不发 subscribe：这样保留宿主默认订阅。
+        # 未指定 events 时按处理器推导；没有处理器则订阅空数组，与 Go 一致。
+        # 不保留宿主握手后的默认消息订阅，避免主动调用插件无意接收全部消息。
         events = list(self._subscribed) if self._subscribed is not None else list(self._handlers)
-        if self._filters: events.append("wechat.message.filter")
-        if self._subscribed is None and not events:
-            LOGGER.warning("no handlers registered; nothing will be subscribed")
-            return
+        if self._filters: events.append(MESSAGE_FILTER)
+        events = list(dict.fromkeys(events))
+        unsupported = [name for name in events if name not in self.host_events]
+        if unsupported:
+            raise PluginError("unsupported_event", "宿主不支持事件：" + ", ".join(unsupported) + "；请更新宿主")
         payload: Dict[str, Any] = {"v": PROTOCOL_VERSION, "type": "subscribe", "events": events}
         if self.event_filter:
             payload["filter"] = self.event_filter
@@ -321,36 +520,74 @@ class Plugin:
             return
         event = Event(frame)
         if frame.get("cursor") is not None:
-            task = asyncio.create_task(self._run_durable(event))
+            task = asyncio.create_task(self._after_event(self._durable_tail, event, durable=True))
+            self._durable_tail = task
         else:
-            if self._is_duplicate(event.event_id): return
-            task = asyncio.create_task(self._run_handlers(event, self._handlers.get(event.name, [])))
+            if self._is_duplicate(self._event_key(event)): return
+            if event.name in (GROUP_REFRESH_HINT, SYNC_HINT):
+                task = asyncio.create_task(self._after_event(self._hint_tail, event, durable=False))
+                self._hint_tail = task
+            else:
+                task = asyncio.create_task(self._run_realtime(event))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
+    async def _after_event(self, previous, event, *, durable):
+        # 在接收帧时绑定前驱，而不是依赖任务取得 Lock 的先后顺序。
+        # 初始化放行的瞬间，刚创建的任务可能先于已等待的任务得到调度。
+        if previous is not None:
+            await asyncio.shield(previous)
+        if durable:
+            await self._run_durable(event)
+        else:
+            await self._run_realtime(event)
+
     async def _run_durable(self, event):
-        # Acknowledge in delivery order; never advance past an unfinished callback.
+        await self._events_ready.wait()
+        # 按接收顺序确认，不能跨过失败或尚未完成的回调。
         async with self._durable_lock:
+            if self._connection_error is not None:
+                return
             marker = source_event.set(event.event_id)
+            platform_marker = self._event_platform.set(event.platform)
             try:
-                if event.name == "wechat.message.filter":
+                if event.name == MESSAGE_FILTER:
                     decision = None
                     for handler in self._filters:
                         decision = handler(event)
                         if inspect.isawaitable(decision): decision = await decision
                         if isinstance(decision, dict) and decision.get("stop"): break
                     await self.api("wechat.filters.decide", {"event_id": event.event_id, "stop": bool(isinstance(decision, dict) and decision.get("stop"))})
-                elif event.event_id not in self._seen:
+                elif self._event_key(event) not in self._seen:
                     await self._run_handlers(event, self._handlers.get(event.name, []))
+                # 成功回调在 ACK 前记住；回执丢失后重连仅重发 ACK，不重复业务副作用。
+                self._is_duplicate(self._event_key(event))
                 await self.api("wechat.events.ack", {"cursor": event.raw["cursor"]})
-                self._is_duplicate(event.event_id)
             except asyncio.CancelledError:
                 raise
-            except Exception:
+            except Exception as exc:
+                self._connection_error = exc
                 LOGGER.exception("durable event failed; reconnect will replay %s", event.event_id)
                 if self._ws is not None: await self._ws.close()
             finally:
                 source_event.reset(marker)
+                self._event_platform.reset(platform_marker)
+
+    async def _run_realtime(self, event: Event):
+        await self._events_ready.wait()
+        if event.name not in (GROUP_REFRESH_HINT, SYNC_HINT):
+            return await self._run_handlers(event, self._handlers.get(event.name, []))
+        # 两类 Hint 共用顺序锁，避免群快照刷新交错覆盖。没有 cursor，绝不发送 ack。
+        # 中断恢复依赖 on_connect 重新核对；其他实时消息保留原有并发策略。
+        async with self._hint_lock:
+            if self._connection_error is not None:
+                return
+            try:
+                await self._run_handlers(event, self._handlers.get(event.name, []))
+            except Exception as exc:
+                self._connection_error = exc
+                if self._ws is not None:
+                    await self._ws.close()
 
     async def _run_handlers(self, event: Event, handlers: List[Handler]) -> None:
         assert self._slots is not None
@@ -358,6 +595,7 @@ class Plugin:
         async with self._slots:
             for handler in handlers:
                 platform_marker = self._event_platform.set(event.platform)
+                source_marker = source_event.set(event.event_id)
                 try:
                     parameters = inspect.signature(handler).parameters
                     result = handler(event) if len(parameters) == 1 else handler(event, self._context)
@@ -365,7 +603,7 @@ class Plugin:
                         await result
                 except asyncio.CancelledError:
                     raise
-                except Exception:  # noqa: BLE001 - 单个处理函数出错不该断连
+                except Exception:  # 普通实时消息隔离异常；可靠事件与群提示需要断线恢复。
                     diagnostic = (
                         f"WS 插件事件处理失败 plugin_id={self.plugin_id} "
                         f"event={event.name} event_id={event.event_id} "
@@ -374,13 +612,19 @@ class Plugin:
                     error = traceback.format_exc()
                     LOGGER.error("%s\n%s", diagnostic, error)
                     try:
-                        # 同步到宿主日志，方便从插件页统一排障；不影响后续 handler。
+                        # 同步到宿主日志，方便从插件页统一排障。
                         await self.log(f"{diagnostic}\n{error}", level="error")
                     except Exception:  # noqa: BLE001 - 连接已断时仍保留本地 traceback
                         LOGGER.debug("插件异常日志未能送达宿主 plugin_id=%s", self.plugin_id)
-                    if event.raw.get("cursor") is not None: raise
+                    if event.raw.get("cursor") is not None or event.name in (GROUP_REFRESH_HINT, SYNC_HINT): raise
                 finally:
                     self._event_platform.reset(platform_marker)
+                    source_event.reset(source_marker)
+
+    @staticmethod
+    def _event_key(event: Event) -> str:
+        # 通用与微信专用通道可能使用相同 ID，去重必须包含事件名。
+        return f"{event.name}\0{event.event_id}" if event.event_id else ""
 
     def _is_duplicate(self, event_id: str) -> bool:
         if not event_id or self._dedupe_size == 0:
@@ -416,11 +660,11 @@ class Plugin:
                 raise ValueError("send requires account_id and to")
             return await self._action("send", account_id=account_id, to=to,
                                       platform=platform, segments=segments,
-                                      idempotency_key=idempotency_key or uuid4().hex)
+                                      idempotency_key=idempotency_key or new_key())
         raise ValueError(f"unsupported send platform: {platform}")
 
     async def _action(self, kind: str, *, segments: Segments, **target: str) -> Dict[str, Any]:
-        target.setdefault("idempotency_key", uuid4().hex)
+        target.setdefault("idempotency_key", new_key())
         action_id = self._next_id("act")
         frame = {"v": PROTOCOL_VERSION, "type": "action", "action_id": action_id,
                  "kind": kind, "segments": list(segments), **target}
@@ -454,9 +698,12 @@ class Plugin:
             exc.account_id = (params or {}).get("account_id")
             raise
         if not result.get("ok"):
-            raise PluginError(
-                result.get("code") or "internal", result.get("message") or "api failed"
-            )
+            exc = PluginError(result.get("code") or "internal", result.get("message") or "api failed")
+            exc.idempotency_key = (params or {}).get("options", {}).get("idempotency_key")
+            exc.account_id = (params or {}).get("account_id")
+            exc.call_id = result.get("call_id")
+            exc.status = result.get("status")
+            raise exc
         return result.get("data")
 
     async def log(self, message: str, level: str = "info") -> None:
@@ -475,17 +722,21 @@ class Plugin:
             if self._request_timeout is None:
                 return await future
             return await asyncio.wait_for(future, timeout=self._request_timeout)
+        except websockets.exceptions.ConnectionClosed as exc:
+            raise PluginError("disconnected", "connection closed; query the original receipt") from exc
         except asyncio.TimeoutError as exc:
             future.cancel()
             raise PluginError(
                 "timeout",
                 f"request {req_id} timed out after {self._request_timeout:g}s",
             ) from exc
+        except OSError as exc:
+            raise PluginError("connection_error", "transport failed; query the original receipt") from exc
         finally:
             self._pending.pop(req_id, None)
 
     def _resolve_pending(self, frame: Dict[str, Any]) -> None:
-        key = frame.get("req_id") or frame.get("action_id")
+        key = frame.get("req_id") or frame.get("action_id") or frame.get("ref")
         if not key:
             return
         future = self._pending.get(key)

@@ -32,6 +32,7 @@ class TelegramWireTests(unittest.IsolatedAsyncioTestCase):
             await ws.send(json.dumps({"type": "hello.ok", "host_version": "test", "events": ["message.received"]}))
             subscribed = json.loads(await ws.recv())
             self.assertEqual(subscribed["events"], ["message.received"])
+            await ws.send(json.dumps({"type": "subscribe.ok", "events": ["message.received"]}))
             await ws.send(json.dumps(event("telegram", "tg:1", "123456", "987654")))
 
             for outbox_id in (31, 32):
@@ -98,6 +99,7 @@ class TelegramWireTests(unittest.IsolatedAsyncioTestCase):
             await ws.recv()
             await ws.send(json.dumps({"type": "hello.ok", "host_version": "test", "events": ["message.received"]}))
             self.assertEqual(json.loads(await ws.recv())["events"], ["message.received"])
+            await ws.send(json.dumps({"type": "subscribe.ok", "events": ["message.received"]}))
             await ws.send(json.dumps(event("wechat", "wx:1", "wxid_bot", "wxid_friend")))
             call = json.loads(await asyncio.wait_for(ws.recv(), 2))
             self.assertEqual((call["type"], call["method"]), ("api.call", "wechat.send"))
@@ -169,6 +171,7 @@ class TelegramWireTests(unittest.IsolatedAsyncioTestCase):
             await ws.recv()
             await ws.send(json.dumps({"type": "hello.ok", "host_version": "test", "events": ["message.received"]}))
             await ws.recv()
+            await ws.send(json.dumps({"type": "subscribe.ok"}))
             ready.set_result(None)
             action = json.loads(await asyncio.wait_for(ws.recv(), 2))
             await ws.send(json.dumps({"type": "action.ack", "action_id": action["action_id"],
