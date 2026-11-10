@@ -15,7 +15,7 @@ def normalize(key):
     return key.replace('_', '').replace('-', '').lower()
 
 HELP = {
-    'base64': '图片文件的纯 Base64，不带 data: 前缀。',
+    'base64': '媒体文件的标准 Base64；支持 Data URI 的接口以字段说明为准。',
     'toWxid': '接收人微信 ID 或群 ID。',
     'fileAesKey': '图片 CDN 解密密钥，来自收到的媒体消息或上传结果；不是登录 token。',
     'fileNo': '图片 CDN 文件编号，来自媒体消息或上传结果。',
@@ -76,12 +76,15 @@ def sample(schema, name=''):
 
 def build(allowed_methods, spec, source):
     def resolve(schema, seen=()):
+        if len(schema.get('allOf', [])) == 1:
+            return {**resolve(schema['allOf'][0], seen),
+                    **resolve({k:v for k,v in schema.items() if k != 'allOf'}, seen)}
         if '$ref' in schema:
             ref = schema['$ref'].rsplit('/', 1)[-1]
             if ref in seen: return {'type': 'object', 'description': '递归对象；参见服务文档。'}
             return resolve(spec['definitions'][ref], (*seen, ref))
         result = {k: ({n: resolve(v, seen) for n, v in val.items()} if k == 'properties'
-                    else resolve(val, seen) if k == 'items' else val) for k, val in schema.items()}
+                    else resolve(val, seen) if k in ('items', 'additionalProperties') and isinstance(val, dict) else val) for k, val in schema.items()}
         if 'properties' in result: result['additionalProperties'] = False
         return result
     methods = []
@@ -96,9 +99,15 @@ def build(allowed_methods, spec, source):
             raise ValueError(f'Missing POST documentation for {name}: {path}')
         body = next((p for p in operation.get('parameters', []) if p['in'] == 'body'), {})
         schema = resolve(body.get('schema', {'type': 'object', 'properties': {}}))
+        if path == '/Finder/Invoke/{operation}':
+            schema.setdefault('properties', {})['operation'] = {
+                'type':'string', 'pattern':r'^[A-Za-z0-9_]{1,128}$', 'example':'FinderInit',
+                'description':'Operations 返回的操作名；业务参数放入 request，64 位整数使用十进制字符串。',
+            }
+            schema['required'] = list(dict.fromkeys([*schema.get('required', []), 'operation']))
         props = {k: v for k, v in schema.get('properties', {}).items() if normalize(k) not in FORBIDDEN}
         required = [k for k in schema.get('required', []) if k in props]
-        sending = name in {'msg.send_text_message','msg.send_app_message','msg.send_share_link','msg.send_video_message','msg.send_cdn_file','msg.send_cdn_img','msg.send_cdn_video','msg.send_emoji','msg.send_quote','msg.send_voice','msg.share_card','msg.share_location','msg.share_video','msg.send_image_via_cdn','msg.send_cdn_img_after_upload'}
+        sending = name in {'msg.send_text_message','msg.send_app_message','msg.send_share_link','msg.send_video_message','msg.send_cdn_file','msg.send_cdn_img','msg.send_cdn_video','msg.send_emoji','msg.send_quote','msg.send_voice','msg.share_card','msg.share_location','msg.send_file','msg.send_cdn_file_after_upload','msg.send_cdn_video_after_upload','msg.send_image_via_cdn','msg.send_cdn_img_after_upload'}
         if sending and 'toWxid' not in required: required.append('toWxid')
         if name == 'msg.send_text_message': required.append('content')
         fields=[]
@@ -106,10 +115,9 @@ def build(allowed_methods, spec, source):
             media_help = {
                 ('msg.send_voice','base64'): '已编码语音文件的纯 Base64，不带 data: 前缀；宿主不自动转码。',
                 ('msg.send_voice','type'): '语音编码格式编号，必须与 Base64 内容一致；当前文档未列出完整枚举。',
-                ('msg.send_voice','voiceTime'): '语音时长，示例 1000；当前文档未注明单位，按服务端约定传入。',
+                ('msg.send_voice','voiceTime'): '语音时长，单位毫秒，范围 1..60000。',
                 ('msg.send_video_message','base64'): '视频文件的纯 Base64，不带 data: 前缀。',
                 ('msg.send_video_message','imageBase64'): '视频封面图片的纯 Base64。',
-                ('msg.send_video_message','playLength'): '视频时长；按当前服务的时长约定传入，示例为 2。',
             }.get((name,key))
             if media_help and not field.get('description'): field['description']=media_help
             field['description'] = field.get('description') or HELP.get(key) or f'服务端字段 {key}，语义以接口说明为准。'
@@ -124,7 +132,8 @@ def build(allowed_methods, spec, source):
             'response_description':operation.get('responses',{}).get('200',{}).get('description',''),
             'response_schema':resolve(operation.get('responses',{}).get('200',{}).get('schema',{})),
             'return_note':'统一 CallResult：call_id / status / data / raw / messages / error；所有调用记录日志，发送消息入库。超时仅停止等待，请用 call_id 查询；不自动重发。'})
-    return {'version':2,'source':source,'source_sha256':hashlib.sha256(json.dumps(spec,sort_keys=True).encode()).hexdigest(),
+    return {'version':2,'source':source,'server_version':spec.get('info',{}).get('version'),
+            'source_sha256':hashlib.sha256(json.dumps(spec,sort_keys=True).encode()).hexdigest(),
             'methods':methods,'counts':{'business':len(methods),'total':len(methods)}}
 
 if __name__ == '__main__':

@@ -44,7 +44,8 @@ class PanelFlow(unittest.IsolatedAsyncioTestCase):
     async def test_all_public_entries_roundtrip(self):
         async with self.http.get(self.base+'/api/state?account_id=wxid_demo') as r: state=await r.json()
         self.assertEqual(set(state['supported']),set(panel.METHODS))
-        self.assertEqual(len(panel.METHODS),85)
+        self.assertEqual(len(panel.METHODS),panel.CATALOG['counts']['business'])
+        self.assertGreater(len(panel.METHODS),150)
         self.assertNotIn('msg.sync_messages',panel.METHODS)
         for name,method in panel.METHODS.items():
             with self.subTest(method=name):

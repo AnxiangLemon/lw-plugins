@@ -15,7 +15,10 @@ ACCOUNT_ONLINE = "account.online"
 ACCOUNT_OFFLINE = "account.offline"
 
 CALL_UPDATED = "wechat.call.updated"
+GROUP_REFRESH_HINT = "wechat.group.refresh_hint"
+SYNC_HINT = "wechat.sync.hint"
 ALL_EVENTS = (
+    GROUP_REFRESH_HINT, SYNC_HINT,
     MESSAGE_RECEIVED, MESSAGE_SENT, WECHAT_MESSAGE_RECEIVED,
     WECHAT_MESSAGE_SENT, CALL_UPDATED, ACCOUNT_ONLINE, ACCOUNT_OFFLINE,
 )
@@ -58,6 +61,11 @@ class Event:
     @property
     def message(self) -> Dict[str, Any]:
         return self.raw.get("message") or {}
+
+    @property
+    def data(self) -> Dict[str, Any]:
+        """非消息事件的只读业务提示，例如群资料刷新；不代表已确认进退群。"""
+        return self.raw.get("data") or {}
 
     @property
     def text(self) -> str:
@@ -126,8 +134,12 @@ def image_segment(base64: str) -> Dict[str, Any]:
 def voice_segment(base64: str, voice_type: int, voice_time: int) -> Dict[str, Any]:
     return {"type":"voice","data":{"base64":base64,"type":voice_type,"voiceTime":voice_time}}
 
-def video_segment(base64: str, image_base64: str, play_length: int) -> Dict[str, Any]:
-    return {"type":"video","data":{"base64":base64,"imageBase64":image_base64,"playLength":play_length}}
+def video_segment(base64: str, image_base64: str, play_length: Optional[int] = None) -> Dict[str, Any]:
+    return {"type":"video","data":{"base64":base64,"imageBase64":image_base64}}
 
 def wechat_segment(method: str, params: Dict[str, Any]) -> Dict[str, Any]:
     return {"type":"wechat","data":{"method":method,"params":params}}
+
+
+def file_segment(base64: str, file_name: str) -> Dict[str, Any]:
+    return {"type":"file","data":{"base64":base64,"fileName":file_name}}

@@ -6,6 +6,8 @@ LW Tools 的 Lua 插件、Python WebSocket（WS）示例和微信业务接口面
 
 宿主负责账号、业务授权和消息存储；插件通过 Lua API 或 WebSocket 使用宿主提供的能力，无需接入宿主内部实现。
 
+Go 插件现提供轻量 [Go SDK](ws/go/README.md) 和 [微信群管家](ws/go/group-manager/README.md)：本地设置页、成员快照和进退群审计，消息提示独立开关。编译后的程序不依赖 Python 环境。
+
 ## 从这里开始
 
 | 你想做什么 | 入口 |

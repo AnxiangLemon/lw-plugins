@@ -133,6 +133,8 @@ print(call.status, call.call_id)
 
 ## 回执、重试与保留期
 
+微信文件和视频可使用 `file_segment(base64, file_name)`、`video_segment(base64, cover_base64)`，先通过 `cdn.get_dns` 初始化聊天 CDN；视频时长由服务读取。旧 `video_segment` 的第三个时长参数仍可传入，但不再发送。媒体、Finder 和业务参数迁移见[微信业务指南](../../docs/wechat-business.md)。
+
 - 跨超时、重连和重试保存同一业务动作的幂等键；不同动作使用不同键。
 - 调用结果与完成事件可能先后交错，用 `call_id` 关联。超时只停止等待，应查询原回执。
 - `unknown` / `partial` 需要核对执行结果，不换键盲目重发。

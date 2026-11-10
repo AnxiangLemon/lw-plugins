@@ -4,6 +4,21 @@ from unittest.mock import AsyncMock
 from lwplugin import Plugin,Event
 
 class BusinessCallTests(unittest.IsolatedAsyncioTestCase):
+    async def test_group_hint_is_a_separate_event_with_account_scope(self):
+        from lwplugin import GROUP_REFRESH_HINT, SYNC_HINT
+        plugin = Plugin("test.group.hints", events=[GROUP_REFRESH_HINT, SYNC_HINT])
+        event = Event({"event":GROUP_REFRESH_HINT,"account":{"id":"wxid_a","platform":"wechat"},"data":{"room_id":"room@chatroom"}})
+        self.assertEqual(event.account_id,"wxid_a")
+        self.assertEqual(event.data["room_id"],"room@chatroom")
+        self.assertEqual(event.message,{})
+
+    async def test_media_segments_match_the_current_server_contract(self):
+        from lwplugin import file_segment, video_segment
+        self.assertEqual(file_segment('AA==', 'a.txt'),
+                         {'type':'file','data':{'base64':'AA==','fileName':'a.txt'}})
+        self.assertNotIn('playLength', video_segment('AA==', 'AA==')['data'])
+        self.assertNotIn('playLength', video_segment('AA==', 'AA==', 123)['data'])
+
     async def test_one_contract(self):
         plugin=Plugin("test.business")
         plugin.api=AsyncMock(return_value={"status":"queued","call_id":"call_1"})

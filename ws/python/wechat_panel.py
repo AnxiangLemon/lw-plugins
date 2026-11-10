@@ -21,7 +21,8 @@ from lwplugin import Plugin, PluginError
 ASSETS = Path(__file__).with_suffix('')
 CATALOG = json.loads((ASSETS / 'catalog.json').read_text(encoding='utf-8'))
 METHODS = {entry['name']: entry for entry in CATALOG['methods']}
-MAX_BODY = 32 * 1024 * 1024
+# 32 MiB decoded files plus Base64 expansion, cover image and JSON overhead.
+MAX_BODY = 64 * 1024 * 1024
 
 
 def result_view(value):

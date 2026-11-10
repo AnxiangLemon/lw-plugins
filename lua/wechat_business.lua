@@ -9,13 +9,17 @@ local json = require("json")
 function send_voice(account, to, base64, voice_type, milliseconds)
     return plugin.wechat(account):call("msg.send_voice", {toWxid=to, base64=base64, type=voice_type, voiceTime=milliseconds})
 end
-function send_video(account, to, video, cover, seconds)
-    return plugin.wechat(account):call("msg.send_video_message", {toWxid=to, base64=video, imageBase64=cover, playLength=seconds})
+function send_video(account, to, video, cover)
+    local dns=plugin.wechat(account):call("cdn.get_dns", {})
+    if dns.status~="succeeded" then return dns end
+    return plugin.wechat(account):call("msg.send_video_message", {toWxid=to, base64=video, imageBase64=cover})
 end
 function set_group_notice(account, room, content)
     return plugin.wechat(account):call("group.set_announcement", {chatRoomId=room, content=content})
 end
 function download_image(account, file_no, aes_key)
+    local dns=plugin.wechat(account):call("cdn.get_dns", {})
+    if dns.status~="succeeded" then return dns end
     return plugin.wechat(account):call("cdn.download_image", {fileNo=file_no, fileAesKey=aes_key})
 end
 function post_moments(account, body)

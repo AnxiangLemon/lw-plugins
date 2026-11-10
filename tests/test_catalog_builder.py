@@ -59,6 +59,29 @@ class CatalogBuilderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Duplicate public method: group.set_name"):
             build(METHODS * 2, swagger(), "swagger.json")
 
+    def test_finder_dynamic_path_preserves_free_form_requests_and_allof_context(self):
+        spec = {
+            'info': {'version':'1.0.10'},
+            'paths': {'/Finder/Invoke/{operation}': {'post': {
+                'parameters': [{'in':'body','schema':{'$ref':'#/definitions/Invoke'}}]
+            }}},
+            'definitions': {
+                'Invoke': {'type':'object','properties': {
+                    'operation': {'type':'string'},
+                    'request': {'type':'object'},
+                    'transferContext': {'description':'context','allOf':[{'$ref':'#/definitions/Context'}]},
+                }},
+                'Context': {'type':'object','properties': {'finderBaseRequest': {'type':'object'}}},
+            },
+        }
+        result = build([{'name':'finder.invoke','path':'/Finder/Invoke/{operation}'}], spec, 'swagger.json')
+        method = result['methods'][0]
+        self.assertEqual(result['server_version'], '1.0.10')
+        self.assertIn('operation', method['schema']['required'])
+        self.assertNotIn('additionalProperties', method['schema']['properties']['request'])
+        self.assertEqual(method['schema']['properties']['transferContext']['type'], 'object')
+        self.assertNotIn('$ref', json.dumps(method['schema']))
+
     def test_cli_works_with_only_public_json_inputs(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)

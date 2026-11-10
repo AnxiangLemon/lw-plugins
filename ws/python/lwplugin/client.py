@@ -250,7 +250,9 @@ class Plugin:
         # 自定义头参数名不一致，查询串在所有版本上都能用。
         try:
             async with websockets.connect(
-                endpoint.url_with_token(), max_size=32 * 1024 * 1024
+                # CallResult preserves both data and raw: a 32 MiB download
+                # appears twice after Base64 encoding in a single result frame.
+                endpoint.url_with_token(), max_size=128 * 1024 * 1024
             ) as ws:
                 self._ws = ws
                 self._fail_pending("connection restarted")

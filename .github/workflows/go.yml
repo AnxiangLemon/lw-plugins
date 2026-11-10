@@ -1,0 +1,53 @@
+name: Go plugins
+on:
+  push:
+    paths: ['ws/go/**', '.github/workflows/go.yml']
+  pull_request:
+    paths: ['ws/go/**', '.github/workflows/go.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: ['ws/go', 'ws/go/group-manager']
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - if: matrix.module == 'ws/go/group-manager'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: ws/go/group-manager/frontend/package-lock.json
+      - if: matrix.module == 'ws/go/group-manager'
+        name: Install frontend dependencies
+        working-directory: ws/go/group-manager/frontend
+        run: npm ci
+      - if: matrix.module == 'ws/go/group-manager'
+        name: Check frontend types
+        working-directory: ws/go/group-manager/frontend
+        run: npm run typecheck
+      - if: matrix.module == 'ws/go/group-manager'
+        name: Lint frontend
+        working-directory: ws/go/group-manager/frontend
+        run: npm run lint
+      - if: matrix.module == 'ws/go/group-manager'
+        name: Test frontend
+        working-directory: ws/go/group-manager/frontend
+        run: npm test
+      - if: matrix.module == 'ws/go/group-manager'
+        name: Build embedded frontend
+        working-directory: ws/go/group-manager/frontend
+        run: npm run build
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache-dependency-path: '${{ matrix.module }}/go.sum'
+      - run: go test -race ./...
+      - run: go vet ./...
+      - if: matrix.module == 'ws/go/group-manager'
+        run: CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags='-s -w' -o /tmp/group-manager .
+      - if: matrix.module == 'ws/go/group-manager'
+        run: CGO_ENABLED=0 GOOS=windows go build -trimpath -ldflags='-s -w' -o /tmp/group-manager.exe .

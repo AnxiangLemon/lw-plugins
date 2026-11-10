@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const groups = {cdn:'媒体上传 / 下载',favor:'收藏',finder:'视频号',friend:'联系人 / 好友',group:'群管理',label:'标签',msg:'消息收发',official:'公众号',openim:'企业微信联系人',search:'搜索',sns:'朋友圈',user:'个人信息',wxapp:'小程序业务'};
+const groups = {cdn:'媒体上传 / 下载',favor:'收藏',finder:'视频号',friend:'联系人 / 好友',group:'群管理',label:'标签',msg:'消息收发',official:'公众号',openim:'企业微信联系人',search:'搜索',sns:'朋友圈',tenpay:'红包 / 转账 / 钱包',user:'个人信息',wxapp:'小程序业务'};
 let catalog, current, supported = new Set(), connected = false, busy = false, fields = [], resultText = '', generation = 0, stateGeneration = 0;
 let selectedGroup = '', selectedMode = 'call';
 let inboxSocket, inboxCount = 0;
@@ -55,13 +55,14 @@ function renderNav(){
 function messageRow(frame){
   const message=frame.message || {}, raw=message.raw || {};
   const peer=message.peer_id || message.peer || '';
+  const isGroup=message.is_group || message.chat_type==='group' || peer.endsWith('@chatroom') || peer.endsWith('@im.chatroom');
   const row=node('article',undefined,'message-entry');
   const body=node('div',undefined,'message-body');
   const meta=node('div',undefined,'message-meta');
   const sender=message.from?.id || peer || '未知发送者';
   meta.append(node('strong',sender));
   meta.append(node('span',`账号 · ${frame.account?.id || frame.account_id || ''}`,'message-account'));
-  if(peer.endsWith('@chatroom'))meta.append(node('span',`群聊 · ${peer}`));
+  if(isGroup)meta.append(node('span',`群聊 · ${peer}`));
   else if(peer && peer!==sender)meta.append(node('span',`会话 · ${peer}`));
   const date=new Date(Number(message.timestamp || frame.received_at)*1000);
   const when=node('time',Number.isNaN(date.getTime())?'时间未知':date.toLocaleString('zh-CN'),'message-time');
@@ -70,7 +71,7 @@ function messageRow(frame){
   const details=node('details',undefined,'message-raw');
   details.append(node('summary','查看原始事件'),node('pre',JSON.stringify(frame,null,2)));
   body.append(meta,node('p',content,'message-text'),details);
-  row.append(node('span',peer.endsWith('@chatroom')?'群':'收','message-avatar'),body);
+  row.append(node('span',isGroup?'群':'收','message-avatar'),body);
   row.title=`事件 ID：${frame.event_id || '未知'}`;
   return row;
 }
@@ -186,7 +187,7 @@ function renderFields(){
       const file=node('input'); file.type='file';file.setAttribute('aria-label',`${field.name} 选择文件转 Base64`);
       file.onchange=async()=>{
         const selected=file.files[0]; if(!selected)return;
-        if(selected.size>22*1024*1024){$('validation').textContent='单个文件不能超过 22 MiB；所有参数编码后还受宿主 WS 帧限制。';return;}
+        if(selected.size>32*1024*1024){$('validation').textContent='单个文件不能超过 32 MiB；图片、封面和语音另有限制，见字段说明。已有宿主配置的 WS 帧限制也需容纳 Base64。';return;}
         try{const raw=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(selected);}); input.value=raw.slice(raw.indexOf(',')+1);include.checked=true;onChange();}
         catch{$('validation').textContent='文件读取失败';}
       };

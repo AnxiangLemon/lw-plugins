@@ -6,11 +6,21 @@
 
 ## 接口与参数
 
-本仓库的[接口目录](../ws/python/wechat_panel/catalog.json)包含 85 个业务方法，可在面板中查看参数、嵌套 schema 与调用代码。实际可用方法以当前宿主返回的能力列表为准。
+本仓库的[接口目录](../ws/python/wechat_panel/catalog.json)包含 164 个业务方法，可在面板中查看参数、嵌套 schema 与调用代码。实际可用方法以当前宿主返回的能力列表为准。
 
 - 参数使用服务原字段名，例如 `toWxid`、`chatRoomId`、`base64`、`voiceTime`，不转换旧参数别名。
 - 登录、授权和内部消息同步由宿主管理。插件订阅 `wechat.message.received` 接收消息，无需调用 `/Msg/Sync`。
 - 媒体输入需符合服务要求的编码和格式。示例中的 `AA==` 仅用于模拟，宿主不负责自动转码。
+
+当前目录对齐 lwsapi v1.0.10，包括 CDN 文件/视频/朋友圈/收藏 HTML、公众号、小程序查询、OpenIM 与 TenPay。Finder 使用 `finder.operations/schema/build/decode/invoke`；Invoke 参数为 `{"operation":"FinderInit","request":{}}`，操作参数先查 Schema，PB 64 位整数用字符串。服务端公开工具入口可不登录；插件调用仍通过宿主账号范围的账本。
+
+公众号关注传 `bizUserName`，视频不再传 `playLength`，语音 `voiceTime` 单位毫秒。`enabled:false`、备注 `""` 和标签 `[]` 表示明确关闭或清空，不要省略。普通群和企业互通群分别使用 `@chatroom`、`@im.chatroom`，企业联系人 `@openim` 不是群 ID。
+
+文件可先 `cdn.get_dns` 再调用 `msg.send_file`，参数为 `toWxid`、`fileName`、`base64`。也可使用 Python `file_segment(base64, file_name)` / `video_segment(base64, cover_base64)` 通过 `wx.send` 发送；视频时长由 MP4 解析。上传成功与发送成功分开判断，分步发送时原样配对上传结果的 `fileId`、`aesKey` 和明文 `rawSize`。
+
+文件/视频正文最大 32 MiB、封面最大 5 MiB、语音最大 2 MiB；Base64 会增加约三分之一体积。新版默认 WS 请求与面板容量为 64 MiB，Python WS 接收上限为 128 MiB，以容纳下载结果中 data/raw 两份原文；旧宿主配置中显式的较小 `plugin_ws.max_frame_bytes` 仍有效，需要大文件时设为 `67108864` 并重启 WS 服务。媒体格式与更细限制以面板字段说明为准。
+
+分页使用各接口返回的实际游标、offset 和继续/结束标志，不自动按页码递增，不混用 SNS/Favor/登录游标。TenPay 预查询、领取、转账查询、收款和退款都是独立动作，不自动执行下一步；结果不确定时先查询原回执与实际业务状态。返回的 PB 逐项状态及支付业务状态还需按接口检查。
 
 ## Lua：接收事件并调用接口
 

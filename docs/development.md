@@ -43,7 +43,7 @@ python -m unittest discover -s ws/python/tests -v
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-SDK 测试覆盖业务调用、事件确认、错误日志和多平台 WS 行为。面板测试使用本地模拟宿主，覆盖全部 85 个接口入口、账号选择、参数校验、实时消息、JSON 精度、异步回执、业务失败和跨来源请求；目录生成器测试验证公开方法范围与字段转换。这些测试不需要实际账号或运行中的宿主。
+SDK 测试覆盖业务调用、事件确认、错误日志和多平台 WS 行为。面板测试使用本地模拟宿主，覆盖全部 164 个接口入口、账号选择、参数校验、实时消息、JSON 精度、异步回执、业务失败和跨来源请求；目录生成器测试验证公开方法范围与字段转换。这些测试不需要实际账号或运行中的宿主。
 
 ## 调试插件
 
@@ -75,6 +75,14 @@ python tools/build_wechat_panel_catalog.py --docs-file 'C:\path\to\swagger.json'
 
 生成器默认沿用公开目录中的 `name` / `path` 方法清单，只更新这些方法的参数和返回说明，不会把文档中的所有服务接口加入插件。可通过 `--methods-file` 指定其他包含 `methods` 数组的 JSON；新增方法前应确认宿主能力列表支持它。工具只读取文档，不调用业务接口，也不需要宿主源码。
 
+宿主维护者可用 Rust SDK 导出的公开 `wechat-methods.json` 更新方法范围：
+
+```powershell
+python tools/build_wechat_panel_catalog.py --methods-file 'C:\path\to\wechat-methods.json' --docs-file 'C:\path\to\swagger.json'
+```
+
+当前内置目录对齐服务端 v1.0.10，包含 164 个业务方法。Finder 动态路径从 `operation` 字段取操作名，自由业务对象保留开放字段，带说明的 `allOf/$ref` 嵌套结构会展开后校验。
+
 ## 贡献约定
 
 - 使用中文提交说明，描述具体变更及目的。
@@ -83,3 +91,7 @@ python tools/build_wechat_panel_catalog.py --docs-file 'C:\path\to\swagger.json'
 - 调整行为或 API 时同步文档，并执行受影响的测试。
 - 文档使用一个一级标题、逐级小节、带语言的代码块及仓库内相对链接。
 - 示例路径使用占位符，不提交账号凭据、endpoint 文件、日志、数据库、本地备份或构建产物。
+
+## Go SDK 与微信群管家
+
+Go SDK 在 `ws/go/`，只直接依赖 WebSocket 库；群管家在独立模块 `ws/go/group-manager/`，SQLite 不进入 SDK 依赖。分别进入两个目录运行 `go test -race ./...` 和 `go vet ./...`。构建和源码发布约定见 [Go SDK](../ws/go/README.md) 与 [群管家](../ws/go/group-manager/README.md)。

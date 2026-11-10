@@ -17,10 +17,28 @@ async def send_voice(ctx, account_id, to, base64, voice_type, voice_time):
     })
 
 
-async def send_video(ctx, account_id, to, video_base64, cover_base64, seconds):
+async def send_video(ctx, account_id, to, video_base64, cover_base64):
+    dns = await ctx.wechat(account_id).call("cdn.get_dns")
+    if dns.status != "succeeded":
+        return dns
     return await ctx.wechat(account_id).call("msg.send_video_message", {
         "toWxid": to, "base64": video_base64,
-        "imageBase64": cover_base64, "playLength": seconds,
+        "imageBase64": cover_base64,
+    })
+
+
+async def send_file(ctx, account_id, to, file_name, base64):
+    dns = await ctx.wechat(account_id).call("cdn.get_dns")
+    if dns.status != "succeeded":
+        return dns
+    return await ctx.wechat(account_id).call("msg.send_file", {
+        "toWxid": to, "fileName": file_name, "base64": base64,
+    })
+
+
+async def finder_invoke(ctx, account_id, operation, request):
+    return await ctx.wechat(account_id).call("finder.invoke", {
+        "operation": operation, "request": request,
     })
 
 
@@ -31,7 +49,9 @@ async def set_group_notice(ctx, account_id, chat_room_id, content):
 
 
 async def download_image(ctx, account_id, file_no, aes_key):
-    await ctx.wechat(account_id).call("cdn.get_dns")
+    dns = await ctx.wechat(account_id).call("cdn.get_dns")
+    if dns.status != "succeeded":
+        return dns
     return await ctx.wechat(account_id).call("cdn.download_image", {
         "fileNo": file_no, "fileAesKey": aes_key,
     })
@@ -41,8 +61,8 @@ async def post_moments(ctx, account_id, body):
     return await ctx.wechat(account_id).call("sns.post", body)
 
 
-async def follow_official(ctx, account_id, app_id):
-    return await ctx.wechat(account_id).call("official.follow", {"appId": app_id})
+async def follow_official(ctx, account_id, biz_user_name):
+    return await ctx.wechat(account_id).call("official.follow", {"bizUserName": biz_user_name})
 
 
 @plugin.on("wechat.message.received")

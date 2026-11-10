@@ -122,13 +122,13 @@ function L.is_text_only(message)
     return has_text
 end
 
---- 微信群 ID（xxx@chatroom）；非群返回 nil
+--- 微信群 ID（普通群或企业互通群）；非群返回 nil
 function L.chatroom_id(message)
     if not message then return nil end
     local from = (message.from or {}).id or ""
     local to = (message.to or {}).id or ""
-    if from:find("@chatroom") then return from end
-    if to:find("@chatroom") then return to end
+    if from:match("@chatroom$") or from:match("@im%.chatroom$") then return from end
+    if to:match("@chatroom$") or to:match("@im%.chatroom$") then return to end
     return nil
 end
 
