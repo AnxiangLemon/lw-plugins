@@ -3,7 +3,6 @@ import { Select as SelectPrimitive } from "radix-ui";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 export const Select = SelectPrimitive.Root;
-export const SelectGroup = SelectPrimitive.Group;
 export const SelectValue = SelectPrimitive.Value;
 export function SelectTrigger({
   className,
@@ -62,20 +61,6 @@ export function SelectContent({
     </SelectPrimitive.Portal>
   );
 }
-export function SelectLabel({
-  className,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Label>) {
-  return (
-    <SelectPrimitive.Label
-      className={cn(
-        "px-2 py-1.5 text-xs font-medium text-muted-foreground",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
 export function SelectItem({
   className,
   children,
@@ -96,16 +81,5 @@ export function SelectItem({
         </SelectPrimitive.ItemIndicator>
       </span>
     </SelectPrimitive.Item>
-  );
-}
-export function SelectSeparator({
-  className,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Separator>) {
-  return (
-    <SelectPrimitive.Separator
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
-      {...props}
-    />
   );
 }

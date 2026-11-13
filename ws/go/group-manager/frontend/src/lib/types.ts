@@ -30,7 +30,6 @@ export interface GroupStatus extends Group {
   member_count: number;
   version: number;
 }
-export type GroupState = GroupStatus;
 export interface Room {
   account_id: string;
   room_id: string;

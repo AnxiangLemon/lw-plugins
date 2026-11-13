@@ -12,6 +12,8 @@ lw-plugins/
 ├── examples/              # 宿主配置示例
 ├── lua/                   # 宿主直接加载的 Lua 插件
 │   └── lib/L.lua          # 共享辅助库
+├── ws/go/                 # Go WS SDK 与两端共用的协议测试数据
+│   └── group-manager/     # 群管家独立 Go 模块与前端工程
 ├── ws/python/
 │   ├── pyproject.toml     # lwplugin 安装配置与 panel 可选依赖
 │   ├── lwplugin/          # Python WS SDK
@@ -36,7 +38,7 @@ SDK 当前版本为 2.4.0，要求 Python 3.9+、宿主 WS 协议 v2。可编辑
 
 只安装基础 SDK 可使用 `python -m pip install -e ./ws/python`。兼容入口 `python -m pip install -r ws/python/requirements.txt` 必须在仓库根目录执行。
 
-## 运行测试
+## 运行 Python 测试
 
 ```powershell
 python -m unittest discover -s ws/python/tests -v
@@ -90,8 +92,12 @@ python tools/build_wechat_panel_catalog.py --methods-file 'C:\path\to\wechat-met
 - 新增插件时提供用途、运行条件、设置说明和最小验证步骤。
 - 调整行为或 API 时同步文档，并执行受影响的测试。
 - 文档使用一个一级标题、逐级小节、带语言的代码块及仓库内相对链接。
-- 示例路径使用占位符，不提交账号凭据、endpoint 文件、日志、数据库、本地备份或构建产物。
+- 示例路径使用占位符。将端点文件、账号凭据、日志、数据库、本地备份及临时构建文件留在本地。
 
 ## Go SDK 与微信群管家
 
-Go SDK 在 `ws/go/`，只直接依赖 WebSocket 库；群管家在独立模块 `ws/go/group-manager/`，SQLite 不进入 SDK 依赖。分别进入两个目录运行 `go test -race ./...` 和 `go vet ./...`。构建和源码发布约定见 [Go SDK](../ws/go/README.md) 与 [群管家](../ws/go/group-manager/README.md)。
+Go SDK 位于 `ws/go/`，要求 Go 1.23+。微信群管家位于 `ws/go/group-manager/`，要求 Go 1.26+。分别进入两个模块运行 `go test -race ./...` 和 `go vet ./...`。
+
+修改群管家前端后，在 `ws/go/group-manager/frontend/` 运行 `npm ci`、`npm run lint`、`npm test` 和 `npm run build`。构建会同步 `ws/go/group-manager/internal/manager/web/`，提交时将更新后的内嵌资源与前端源码一并提交。这样从干净检出可以直接运行群管家的 Go 测试和构建。
+
+发布与运行命令见 [Go SDK](../ws/go/README.md) 和 [微信群管家](../ws/go/group-manager/README.md)。

@@ -4,7 +4,6 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 export const Sheet = SheetPrimitive.Root;
 export const SheetTrigger = SheetPrimitive.Trigger;
-export const SheetClose = SheetPrimitive.Close;
 export const SheetPortal = SheetPrimitive.Portal;
 export function SheetOverlay({
   className,
@@ -57,11 +56,6 @@ export function SheetContent({
 export function SheetHeader({ className, ...props }: ComponentProps<"div">) {
   return (
     <div className={cn("flex flex-col gap-1.5 pr-6", className)} {...props} />
-  );
-}
-export function SheetFooter({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div className={cn("mt-auto flex flex-col gap-2", className)} {...props} />
   );
 }
 export function SheetTitle({

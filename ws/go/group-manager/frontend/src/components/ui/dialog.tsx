@@ -4,7 +4,6 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
-export const DialogClose = DialogPrimitive.Close;
 export const DialogPortal = DialogPrimitive.Portal;
 export function DialogOverlay({
   className,
@@ -52,17 +51,6 @@ export function DialogContent({
 export function DialogHeader({ className, ...props }: ComponentProps<"div">) {
   return (
     <div className={cn("flex flex-col gap-1.5 pr-6", className)} {...props} />
-  );
-}
-export function DialogFooter({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end",
-        className,
-      )}
-      {...props}
-    />
   );
 }
 export function DialogTitle({

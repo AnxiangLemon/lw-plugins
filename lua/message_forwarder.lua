@@ -79,13 +79,6 @@ local function trim(s)
     return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-local function as_list(v)
-    if type(v) == "table" then
-        return v
-    end
-    return {}
-end
-
 local function cfg()
     local rules = settings.get("rules")
     if type(rules) ~= "table" then
@@ -128,10 +121,6 @@ local function contains_any_text(text, list)
     return false
 end
 
-local function peer_id(message)
-    return L.bridge_session_peer(message)
-end
-
 local function chat_type(message)
     if L.is_group(message) then
         return "group"
@@ -139,7 +128,7 @@ local function chat_type(message)
     return "private"
 end
 
-local function matches_rule(account_id, message, rule)
+local function matches_rule(account_id, message, text, rule)
     if type(rule) ~= "table" then
         return false
     end
@@ -155,14 +144,13 @@ local function matches_rule(account_id, message, rule)
     if not list_empty(rule.chat_types) and not contains(rule.chat_types, chat_type(message)) then
         return false
     end
-    if not list_empty(rule.source_peers) and not contains(rule.source_peers, peer_id(message)) then
+    if not list_empty(rule.source_peers) and not contains(rule.source_peers, L.bridge_session_peer(message)) then
         return false
     end
     if not list_empty(rule.source_senders) and not contains(rule.source_senders, L.sender_id(message)) then
         return false
     end
 
-    local text = trim(message.text or "")
     if not list_empty(rule.keywords) and not contains_any_text(text, rule.keywords) then
         return false
     end
@@ -170,11 +158,6 @@ local function matches_rule(account_id, message, rule)
         return false
     end
     return true
-end
-
-local function build_forward_text(message)
-    -- 转发内容即消息原文，不加前缀和来源信息
-    return trim(message.text or "")
 end
 
 local function normalize_targets(rule)
@@ -185,8 +168,7 @@ local function normalize_targets(rule)
     return targets
 end
 
-local current_event_id = ""
-local function send_to_target(default_account_id, target, text)
+local function send_to_target(default_account_id, target, text, event_id)
     local target_account = default_account_id
     local to = ""
 
@@ -202,21 +184,16 @@ local function send_to_target(default_account_id, target, text)
         return false, "empty target"
     end
 
-    local result = plugin.wechat(target_account):send(to, {{type="text", data={text=text}}}, {idempotency_key="forward:" .. current_event_id .. ":" .. target_account .. ":" .. to})
+    local result = plugin.wechat(target_account):send(to, {{type="text", data={text=text}}}, {idempotency_key="forward:" .. event_id .. ":" .. target_account .. ":" .. to})
     return result.status == "succeeded", result.error
 end
 
-local function forward_by_rule(account_id, message, rule)
-    local text = build_forward_text(message)
-    if trim(text) == "" then
-        return 0
-    end
-
+local function forward_by_rule(account_id, text, rule, event_id)
     local count = 0
     local targets = normalize_targets(rule)
     for i = 1, #targets do
         local ok, err = pcall(function()
-            local sent, send_err = send_to_target(account_id, targets[i], text)
+            local sent, send_err = send_to_target(account_id, targets[i], text, event_id)
             if not sent then
                 error(send_err)
             end
@@ -245,10 +222,6 @@ local recent_forwarded = {}
 local RECENT_TTL_SECS = 300
 local RECENT_MAX = 64
 
-local function recent_key(message)
-    return tostring(message.platform or "") .. ":" .. peer_id(message) .. ":" .. tostring(trim(message.text or ""))
-end
-
 local function is_recently_forwarded(key, ts)
     local rec = recent_forwarded[key]
     return rec ~= nil and (ts - rec) < RECENT_TTL_SECS
@@ -265,7 +238,9 @@ local function record_recent(key, ts)
     end
 end
 
-local function handle(account_id, message)
+plugin.on("wechat.message.received", function(event)
+    local account_id = event.account_id
+    local message = event.message
     local c = cfg()
     if L.is_self(account_id, message) or L.is_system(message) then
         return
@@ -280,7 +255,7 @@ local function handle(account_id, message)
     end
 
     local ts = tonumber(message.timestamp or 0) or 0
-    local key = recent_key(message)
+    local key = tostring(message.platform or "") .. ":" .. L.bridge_session_peer(message) .. ":" .. text
     if ts > 0 and is_recently_forwarded(key, ts) then
         return
     end
@@ -288,22 +263,12 @@ local function handle(account_id, message)
     local total = 0
     for i = 1, #c.rules do
         local rule = c.rules[i]
-        if matches_rule(account_id, message, rule) then
-            local n = forward_by_rule(account_id, message, rule)
-            total = total + n
+        if matches_rule(account_id, message, text, rule) then
+            total = total + forward_by_rule(account_id, text, rule, event.event_id)
         end
     end
 
-    if total > 0 then
-        if ts > 0 then
-            record_recent(key, ts)
-        end
+    if total > 0 and ts > 0 then
+        record_recent(key, ts)
     end
-end
-
-plugin.on("wechat.message.received", function(event)
-    local message = event.message
-    message.event_id = event.event_id
-    current_event_id = event.event_id
-    return handle(event.account_id, message)
 end)

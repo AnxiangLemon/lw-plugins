@@ -1,12 +1,6 @@
 # LW Plugins
 
-LW Tools 的 Lua 插件、Python WebSocket（WS）示例和微信业务接口面板。
-
-面向 LW Tools 插件开发者，提供 Lua 插件、`lwplugin` Python SDK、可运行示例、接口面板和测试。你可以仅凭本仓库安装 SDK、编写插件、运行测试与体验模拟面板；连接实际账号时，需要运行兼容的 LW Desktop / Web 宿主。
-
-宿主负责账号、业务授权和消息存储；插件通过 Lua API 或 WebSocket 使用宿主提供的能力，无需接入宿主内部实现。
-
-Go 插件现提供轻量 [Go SDK](ws/go/README.md) 和 [微信群管家](ws/go/group-manager/README.md)：本地设置页、成员快照和进退群审计，消息提示独立开关。编译后的程序不依赖 Python 环境。
+LW Tools 的 Lua 插件、Go 和 Python WebSocket SDK、微信群管家与微信接口面板。插件通过 Lua API 或 WebSocket 使用宿主提供的账号和业务能力。运行测试和模拟面板只需要本仓库，连接实际账号需要兼容的 LW Desktop 或 Web 宿主。
 
 ## 从这里开始
 
@@ -17,10 +11,12 @@ Go 插件现提供轻量 [Go SDK](ws/go/README.md) 和 [微信群管家](ws/go/g
 | 验证 WS 连接和消息回复 | [Python 运行步骤](#运行-python-示例) |
 | 在浏览器中调试微信接口 | [微信接口面板](docs/wechat-panel.md) |
 | 编写 Python WS 插件 | [lwplugin SDK](ws/python/README.md) |
+| 编写 Go WS 插件 | [Go SDK](ws/go/README.md) |
+| 构建微信群管家 | [群管家说明](ws/go/group-manager/README.md) |
 | 编写微信业务调用 | [微信业务开发](docs/wechat-business.md) |
 | 运行测试或更新接口目录 | [开发与调试](docs/development.md) |
 
-## 快速体验
+## 快速体验微信接口面板
 
 以下命令使用 PowerShell；先确认已安装 Python 3.9+ 和 Git：
 
@@ -100,21 +96,13 @@ directory = 'C:/path/to/lw-plugins/lua'
 
 ## 运行 Python 示例
 
-以下命令在本仓库根目录执行，使用 PowerShell。建议先创建虚拟环境：
+在本仓库根目录执行。已按[快速体验](#快速体验微信接口面板)安装 SDK 时，可以直接[连接宿主](#连接宿主)。只运行 Echo 等示例时，安装基础 SDK 即可。
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+python -m pip install -e ./ws/python
 ```
-
-从当前公开仓库安装 SDK 和面板依赖：
-
-```powershell
-python -m pip install -e './ws/python[panel]'
-python ws/python/wechat_panel.py --demo
-```
-
-打开 <http://127.0.0.1:8765> 即可体验，无需实际宿主。只运行 Echo 等基础插件时可用 `python -m pip install -e ./ws/python`，省略面板依赖。原来的 `python -m pip install -r ws/python/requirements.txt` 也会安装本仓库 SDK 与面板依赖。
 
 SDK API、事件与多平台调用见 [Python SDK 文档](ws/python/README.md)。
 
@@ -140,8 +128,8 @@ python ws/python/assistant.py
 # 微信业务能力查询示例
 python ws/python/wechat_business.py
 
-# 使用模拟宿主打开接口面板
-python ws/python/wechat_panel.py --demo
+# 连接实际宿主打开接口面板，需要安装 panel 可选依赖
+python ws/python/wechat_panel.py
 ```
 
 面板地址为 <http://127.0.0.1:8765>，完整操作见[面板指南](docs/wechat-panel.md)。
@@ -168,6 +156,4 @@ Desktop 插件页的“打开日志”可定位宿主日志；Python traceback �
 
 ## 许可证
 
-本仓库采用 [MIT License](LICENSE)。
-
-两套语言 SDK 的接口、全部事件、回执语义与源码发布方式见 [Go / Python SDK 协议对照](docs/sdk-parity.md)。
+本仓库采用 [MIT License](LICENSE)。两套 SDK 的接口、事件、回执语义与源码发布方式见 [Go / Python SDK 协议对照](docs/sdk-parity.md)。

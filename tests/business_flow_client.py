@@ -2,7 +2,6 @@
 Invoked by the host integration harness. Never discovers a real endpoint.
 """
 import asyncio
-import importlib
 import json
 import os
 from pathlib import Path

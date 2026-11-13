@@ -4,6 +4,9 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
 build/
 dist/
 .env
@@ -20,5 +23,11 @@ plugin-endpoint.json
 *.db-wal
 *.token
 secret.key
+/ws/go/echo
+/ws/go/echo.exe
+/ws/go/group-manager/group-manager
+/ws/go/group-manager/group-manager.exe
+/ws/go/examples/echo/echo
+/ws/go/examples/echo/echo.exe
 .DS_Store
 Thumbs.db

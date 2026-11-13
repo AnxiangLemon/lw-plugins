@@ -96,7 +96,6 @@ local function cfg()
     return {
         only_wechat = settings.get("only_wechat") == true,
         stop_self = settings.get("stop_self") ~= false,
-        stop_system = true,
         stop_non_text = settings.get("stop_non_text") ~= false,
         blocked_senders = as_list(settings.get("blocked_senders")),
         blocked_peers = as_list(settings.get("blocked_peers")),
@@ -153,10 +152,6 @@ local function text_matches_any(text, patterns)
     return false
 end
 
-local function peer_id(message)
-    return L.bridge_session_peer(message)
-end
-
 local function block()
     return plugin.stop("message_filter rule matched")
 end
@@ -187,7 +182,7 @@ local function handle(account_id, message)
     if c.stop_self and L.is_self(account_id, message) then
         return block()
     end
-    if c.stop_system and L.is_system(message) then
+    if L.is_system(message) then
         return block()
     end
     if c.stop_non_text and not L.is_text_only(message) then
@@ -196,7 +191,7 @@ local function handle(account_id, message)
     if contains(c.blocked_senders, L.sender_id(message)) then
         return block()
     end
-    if contains(c.blocked_peers, peer_id(message)) then
+    if contains(c.blocked_peers, L.bridge_session_peer(message)) then
         return block()
     end
 
@@ -210,7 +205,5 @@ local function handle(account_id, message)
 end
 
 plugin.filter("wechat.message.received", function(event)
-    local message = event.message
-    message.event_id = event.event_id
-    return handle(event.account_id, message)
+    return handle(event.account_id, event.message)
 end)

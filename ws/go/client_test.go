@@ -24,7 +24,7 @@ func endpointServer(t *testing.T, serve func(*websocket.Conn)) *httptest.Server 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer test-token" || r.URL.Query().Get("token") != "" {
 			t.Error("token 应只通过握手 Header 发送")
-			http.Error(w, "auth", 401)
+			http.Error(w, "auth", http.StatusUnauthorized)
 			return
 		}
 		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)

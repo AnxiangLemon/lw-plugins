@@ -44,7 +44,7 @@ end
 
 local function looks_like_wechat_emoji_xml(text)
     local t = trim(text)
-    return t:find("<emoji", 1, true) ~= nil or t:find("<msg><emoji", 1, true) ~= nil
+    return t:find("<emoji", 1, true) ~= nil
 end
 
 -- ── 消息字段 ────────────────────────────────────────────────
@@ -112,8 +112,6 @@ function L.is_text_only(message)
                 end
             elseif TEXT_SEGMENT_TYPES[seg_type] then
                 -- quote / at：允许，但不算正文
-            elseif seg_type == "custom" and (seg.custom_type == "emoji" or seg.custom_type == "sticker") then
-                return false
             else
                 return false
             end

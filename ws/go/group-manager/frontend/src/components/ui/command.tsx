@@ -2,13 +2,6 @@ import type { ComponentProps } from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "./dialog";
 /** 命令面板只筛选调用方传入的条目；不会自行加载账号、群聊或调用业务 API。 */
 export function Command({
   className,
@@ -22,27 +15,6 @@ export function Command({
       )}
       {...props}
     />
-  );
-}
-export function CommandDialog({
-  children,
-  title = "快捷操作",
-  description = "搜索并选择一个操作",
-  ...props
-}: ComponentProps<typeof Dialog> & { title?: string; description?: string }) {
-  return (
-    <Dialog {...props}>
-      <DialogContent
-        className="gap-0 overflow-hidden p-0"
-        showCloseButton={false}
-      >
-        <DialogHeader className="sr-only">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <Command>{children}</Command>
-      </DialogContent>
-    </Dialog>
   );
 }
 export function CommandInput({
@@ -114,28 +86,6 @@ export function CommandItem({
         "relative flex min-h-8 cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-45 data-[selected=true]:bg-accent [&_svg]:size-4",
         className,
       )}
-      {...props}
-    />
-  );
-}
-export function CommandSeparator({
-  className,
-  ...props
-}: ComponentProps<typeof CommandPrimitive.Separator>) {
-  return (
-    <CommandPrimitive.Separator
-      className={cn("my-1 h-px bg-border", className)}
-      {...props}
-    />
-  );
-}
-export function CommandShortcut({
-  className,
-  ...props
-}: ComponentProps<"span">) {
-  return (
-    <span
-      className={cn("ml-auto text-xs text-muted-foreground", className)}
       {...props}
     />
   );

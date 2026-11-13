@@ -1,24 +1,25 @@
 # 群管家前端维护说明
 
-本目录是 Go 群管家 0.3.2 的前端工程。用户运行一个 Go 可执行文件即可使用面板；Node.js 仅用于开发、测试和构建。业务数据来自同源 `/api/*`，本工程不建立新的微信连接，不读取宿主 token。
+群管家前端使用 React、TypeScript、Tailwind CSS 和 Vite。开发与构建需要 Node.js 22.12+，依赖版本以 `package-lock.json` 为准。运行时由 Go 程序提供内嵌页面和同源 `/api/*`。
 
-## A. 技术栈审计
+## 开发与验证
 
-| 项目 | 改造前的群管家 0.2.1 | 当前群管家 0.3.2 |
-| --- | --- | --- |
-| React / React DOM | 未安装，无 `package.json` | 19.3.1 / 19.3.1 |
-| TypeScript | 原生 JavaScript | 5.9.x |
-| Tailwind CSS | 未安装，手写 CSS | 4.3.5，使用 `@tailwindcss/vite` |
-| 构建工具 | 无；Go 直接 embed 静态源码 | Vite 8.3.7 + React 插件 6.3.0 |
-| 交互组件 | 手写 `ui.js` 菜单、弹窗、校验 | 本地组件源码 + Radix 1.8.1 + cmdk 1.1.1 |
-| shadcn/ui | 不存在 | `components.json` 与 shadcn/ui 风格的本地组件；不需要运行时 shadcn 包 |
-| 图标与图表 | 手绘 SVG + canvas | lucide-react 1.71.0 + ECharts 6.1.0 |
-| 状态 | `app.js` 模块变量 + 定时 fetch | React Context + 页面草稿，保持原接口 |
-| 检查 | Go 测试；JS 语法检查 | TypeScript、ESLint、Vitest、Go 测试 |
+在 `frontend/` 中运行以下命令。
 
-相邻 `lw-desktop/frontend` 是独立的 Vue 3.5.44 / Vue Router 4 / Vite 8.3.5 工程，本轮没有迁移或升级 Desktop 的依赖。群管家原本没有 React、Tailwind 或组件库，因此这里是新增独立前端工程，并非替换或升级既有库。版本以 `package.json` 和 `package-lock.json` 为准，使用 `npm ci` 安装；不要为添加一个组件运行整库初始化覆盖源码。
+```sh
+npm ci
+npm run lint
+npm test
+npm run build
+```
 
-## B. UI 架构与目录
+`npm run dev` 启动 `http://127.0.0.1:5178`，将 `/api` 代理到 `http://127.0.0.1:8766`。真实 API 与 CSP 可通过 [Go 内嵌服务](../README.md#构建与运行)验证。
+
+`npm run build` 执行 TypeScript 检查和 Vite 构建，然后用 `scripts/embed.mjs` 同步资源至 `../internal/manager/web/`。将更新后的内嵌资源与前端源码一并提交。回到群管家目录后运行 `go test -race ./...` 和 `go vet ./...`。
+
+浏览器回归可检查深色、浅色、跟随系统、主题持久化、六个页面、窄屏布局及弹层焦点。组件与接口测试使用 `tests/` 中的本地 fixture。
+
+## 目录与页面
 
 ```text
 frontend/
@@ -48,25 +49,11 @@ frontend/
 | `#operations` | 操作记录 | 状态筛选、操作详情、查询原操作结果 |
 | `#settings` | 偏好设置 | 三种主题、数值设置、连接与本地数据说明 |
 
-`app/data-context.tsx` 保存已读取的服务端状态，轮询不回填正在编辑的表单。配置保存仍使用完整 `Config`，页面仅将草稿合并到最新配置；账号与群的身份始终由 `account_id` + `room_id` 共同确定。无需 Redux、Zustand 或额外路由库。
+`app/data-context.tsx` 保存服务端状态。配置页面将本地草稿合并到最新完整 `Config`，轮询期间保留正在编辑的草稿。账号与群的身份由 `account_id` 和 `room_id` 共同确定。
 
-## C. 保留的行为与可复用部分
+`DataTable` 按已加载数组分页。成员动态接口最多返回 200 条，操作接口最多返回 100 条。邀请贡献使用后端按时间段聚合的数据。
 
-- Go 的目录发现、名单完整性校验、快照差集、邀请来源、持久化、通知调度及幂等操作保持原有实现。
-- 六个页面入口、同源请求约定、账号隔离、完整配置结构和结果状态继续复用。
-- 首次记录不产生全员入群事件；入群与离群默认仅记录，发消息由两个独立开关控制。
-- 群编辑、公告预读、本人昵称、通讯录、二维码、成员管理、群主转让、退出及本人链接入群保留。
-- 不确定的写操作只查询原回执，不换新 ID 自动重试；成员动态仍明确区分发现时间与离线补记。
-
-原 DOM 组件依赖全局变量和手动重建节点，已由 React 组件替代；迁移保留业务语义，旧源码备份已清理。
-
-## D. 已重构的 UI 边界
-
-Sidebar、PageHeader、Table、Dialog、Button、菜单、开关、表单和空/错误状态均改为类型化组件。`components/ui` 负责视觉和无障碍交互，`components/shared` 负责通用组合，`features` 与 `pages` 才能读取业务 API。业务组件不要复制通用控件，也不要直接写十六进制颜色。
-
-表格使用轻量泛型 `DataTable`，按已加载数组分页；成员动态接口最多返回 200 条、操作接口最多返回 100 条，界面不会把此数量当作完整历史总数。邀请贡献继续调用后端完整时间段聚合，不从最近日志拼出统计。
-
-## E. 新增依赖及用途
+## 依赖
 
 | 依赖 | 用途 |
 | --- | --- |
@@ -79,9 +66,7 @@ Sidebar、PageHeader、Table、Dialog、Button、菜单、开关、表单和空/
 | `get-nonce` | 将入口 HTML 的 CSP nonce 传给动态滚动锁样式 |
 | TypeScript、Vite、Tailwind、ESLint、Vitest、Testing Library、jsdom | 开发、构建与检查工具 |
 
-没有加入整套业务 UI 框架、日期库、表单库或图表 React 包装器。图表读取同一主题 Token，颜色切换不维护第二套色板。
-
-## Design System
+## 主题与样式
 
 `src/styles/globals.css` 是颜色唯一来源。`:root` 定义浅色，`.dark` 定义深色，Tailwind v4 的 `@theme inline` 将变量映射为 `bg-background`、`text-muted-foreground` 等语义类名。默认入口和 `ThemeProvider` 均采用深色，页面背景不使用纯黑；页面、选中态和主按钮保持中性灰白，卡片采用更明亮的表面；`highlight` 蓝青色点缀导航图标与趋势，成功、警告和失败保留独立语义色。
 
@@ -149,41 +134,10 @@ export function ListExample({ rows, loading, refresh }: {
 
 运行 `npm run dev` 后打开 `http://127.0.0.1:5178/?components` 查看完整组件示例。该入口只在开发构建存在，展示组件名称与交互，不伪造群聊或统计数据，也不增加生产业务路由。
 
-## F. 兼容性与迁移风险
+## API 与浏览器约定
 
-- **嵌入资源同步：** 修改 `src/` 后必须运行 `npm run build` 再构建 Go。直接修改 `internal/manager/web/assets/` 会被下一次前端构建覆盖。
-- **浏览器与构建环境：** Node.js 至少 22.12，浏览器使用现代 Chromium/WebView2；Tailwind v4 和 ES2022 构建以现代浏览器为目标。
-- **CSP：** 只对入口 HTML 添加每次请求独立的样式 nonce。`get-nonce` 供 Radix 动态样式使用，脚本仍限同源，不增加 `unsafe-inline`；API 的原 Host/Origin/请求头校验保留。
-- **API 边界：** `lib/api.ts` 沿用 JSON + `X-Plugin-Request: 1`。请求只发送白名单字段，Go 拒绝未知字段。所有写入不自动重试。
-- **状态与异步：** 账号切换隔离查询结果；列表轮询跳过在途请求，过期响应不覆盖新筛选。表单草稿独立于轮询状态。
-- **业务语义：** `unknown` 是待确认，不是失败。邀请来源为空保持未知，首次名单不计新增；未添加入群审批。
-- **工程边界：** Go 的配置、数据模型和业务接口未变，数据库继续使用已有迁移。Desktop Vue 工程保持独立。
+`lib/api.ts` 集中发送 JSON 请求并设置 `X-Plugin-Request: 1`。`lib/types.ts` 定义请求字段，Go 校验 Host、Origin 和字段白名单。写操作返回 `unknown` 时，页面查询原回执。
 
-读取接口包括 `/api/status`、`/api/accounts`、`/api/rooms`、`/api/dashboard`、`/api/events`、`/api/members`、`/api/operations` 和 `/api/events.csv`。配置、发现、重查、成员/公告读取以及操作/回执沿用现有 POST 端点，具体字段集中在 `lib/types.ts`，不在控件内散落请求逻辑。
+Go 为每次入口 HTML 响应生成独立的样式 nonce，Radix 通过 `get-nonce` 使用它添加滚动锁样式。生产脚本仅从同源加载。目标浏览器为支持 ES2022 和 Tailwind v4 的现代 Chromium 或 WebView2。
 
-## G. 分阶段实施与验证
-
-1. **审计与边界确认：** 核对原技术栈、六个页面、全部群操作和 Go 的 CSP/同源约定。
-2. **工程与 Design System：** 新建独立 Vite 工程、语义 Token、深浅主题和 ThemeProvider。
-3. **公共组件：** 基础组件、交互组件和通用状态分层实现，检查类型和构建，再接入页面。
-4. **布局与 Dashboard：** 统一 AppLayout、可收缩导航、账号搜索、ECharts 和真实空状态。
-5. **业务页面迁移：** 逐页迁移并核对筛选、分页、表单、结果查询及配置保存语义。
-6. **质量验收：** 类型、ESLint、单元测试、Go 测试、实际浏览器多主题和多分辨率检查；最后构建内嵌资源。
-
-在 `frontend/` 中运行：
-
-```sh
-npm ci
-npm run typecheck
-npm run lint
-npm test
-npm run build
-```
-
-`npm run build` 先执行类型检查，再由 Vite 生成 `dist/`，最后由 `scripts/embed.mjs` 同步至 `../internal/manager/web/`。脚本仅清理自己管理的 `assets/`，不会读取或复制 endpoint、配置和数据库。随后回到群管家目录执行 `go test ./...`、`go vet ./...` 和 `go build`。
-
-开发启动 `npm run dev`，`/api` 代理到 `http://127.0.0.1:8766`。代理仅在开发阶段调整同源请求头，生产环境由 Go 同源服务。`npm run preview` 只用于查看已构建静态页面；真实 API 和 CSP 验收应使用 Go 内嵌服务。
-
-本次工程检查已通过 TypeScript、ESLint 和 14 项前端单元测试。测试输入只存在于 `tests/`，用于验证默认不开启消息、保留最新群配置、原回执查询、跨账号隔离、焦点和主题等契约；不注入生产数据，不以单元测试代替真实微信操作验证。旧人工合成预览工具已清理，后续统一通过 Vite 或 Go 内嵌页面检查布局。
-
-浏览器回归使用已有本机服务的实际数据，或明确的独立空数据实例。验收应记录深/浅/System、刷新后主题、六个 hash、窄屏与桌面、弹层焦点和控制台错误；对会修改微信群的操作，先核对对应测试条件，再记录实际执行结果。
+历史迁移和验收记录见 [CHANGESET.md](CHANGESET.md)。

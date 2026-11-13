@@ -15,17 +15,6 @@ export function Avatar({
     />
   );
 }
-export function AvatarImage({
-  className,
-  ...props
-}: ComponentProps<typeof AvatarPrimitive.Image>) {
-  return (
-    <AvatarPrimitive.Image
-      className={cn("size-full object-cover", className)}
-      {...props}
-    />
-  );
-}
 /** 头像缺失时展示姓名首字，不用伪造的网络头像或随机用户图片。 */
 export function AvatarFallback({
   className,

@@ -1,16 +1,18 @@
 import asyncio
 import unittest
 from unittest.mock import AsyncMock
-from lwplugin import Plugin,Event
+from lwplugin import GROUP_REFRESH_HINT, Event, Plugin
 
 class BusinessCallTests(unittest.IsolatedAsyncioTestCase):
     async def test_group_hint_is_a_separate_event_with_account_scope(self):
-        from lwplugin import GROUP_REFRESH_HINT, SYNC_HINT
-        plugin = Plugin("test.group.hints", events=[GROUP_REFRESH_HINT, SYNC_HINT])
-        event = Event({"event":GROUP_REFRESH_HINT,"account":{"id":"wxid_a","platform":"wechat"},"data":{"room_id":"room@chatroom"}})
-        self.assertEqual(event.account_id,"wxid_a")
-        self.assertEqual(event.data["room_id"],"room@chatroom")
-        self.assertEqual(event.message,{})
+        event = Event({
+            "event": GROUP_REFRESH_HINT,
+            "account": {"id": "wxid_a", "platform": "wechat"},
+            "data": {"room_id": "room@chatroom"},
+        })
+        self.assertEqual(event.account_id, "wxid_a")
+        self.assertEqual(event.data["room_id"], "room@chatroom")
+        self.assertEqual(event.message, {})
 
     async def test_media_segments_match_the_current_server_contract(self):
         from lwplugin import file_segment, video_segment

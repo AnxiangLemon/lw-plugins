@@ -3,8 +3,6 @@ import { Popover as PopoverPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
-export const PopoverAnchor = PopoverPrimitive.Anchor;
-export const PopoverClose = PopoverPrimitive.Close;
 export function PopoverContent({
   className,
   align = "center",

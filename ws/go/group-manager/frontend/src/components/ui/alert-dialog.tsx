@@ -3,7 +3,6 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "./button";
 export const AlertDialog = AlertDialogPrimitive.Root;
-export const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 export const AlertDialogPortal = AlertDialogPrimitive.Portal;
 export function AlertDialogOverlay({
   className,
@@ -71,17 +70,6 @@ export function AlertDialogDescription({
   return (
     <AlertDialogPrimitive.Description
       className={cn("text-sm leading-relaxed text-muted-foreground", className)}
-      {...props}
-    />
-  );
-}
-export function AlertDialogAction({
-  className,
-  ...props
-}: ComponentProps<typeof AlertDialogPrimitive.Action>) {
-  return (
-    <AlertDialogPrimitive.Action
-      className={cn(buttonVariants(), className)}
       {...props}
     />
   );
