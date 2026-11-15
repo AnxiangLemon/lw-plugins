@@ -194,14 +194,15 @@ end
 
 -- All sending helpers return the same durable result as wx:call / wx:send.
 function L.reply(account_id, message, text)
-    if message.platform == "telegram" then
+    message._reply_index = (message._reply_index or 0) + 1
+    if (message.platform or "wechat") ~= "wechat" then
         return plugin.reply({
+            _reply_index = message._reply_index - 1,
             event_id = message.event_id,
             account_id = account_id,
             message = message,
         }, text)
     end
-    message._reply_index = (message._reply_index or 0) + 1
     local opts = {}
     if message.event_id then opts.idempotency_key = "reply:" .. message.event_id .. ":" .. message._reply_index end
     return plugin.wechat(account_id):send(message.peer_id, {{type="text", data={text=text}}}, opts)

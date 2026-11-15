@@ -8,6 +8,7 @@ LW Tools 的 Lua 插件、Go 和 Python WebSocket SDK、微信群管家与微信
 | --- | --- |
 | 编写第一个插件 | [插件开发入门](docs/plugin-development.md) |
 | 安装 Lua 插件 | [Lua 安装步骤](#安装-lua-插件) |
+| 收录微信图片、文件和视频 | [媒体归档插件使用说明](lua/media_archive.md) |
 | 验证 WS 连接和消息回复 | [Python 运行步骤](#运行-python-示例) |
 | 在浏览器中调试微信接口 | [微信接口面板](docs/wechat-panel.md) |
 | 编写 Python WS 插件 | [lwplugin SDK](ws/python/README.md) |
@@ -40,8 +41,9 @@ python ws/python/wechat_panel.py --demo
 | [demo.lua](lua/demo.lua) | 收到 `!ping` 后回复 `pong` |
 | [message_filter.lua](lua/message_filter.lua) | 按消息类型、发送者、会话和关键词过滤消息 |
 | [message_forwarder.lua](lua/message_forwarder.lua) | 根据规则在账号、会话之间转发消息 |
+| [media_archive.lua](lua/media_archive.lua) | 收录指定会话的微信媒体引用，由 lwscdn Server 按消息日期分类。见[使用说明](lua/media_archive.md) |
 | [archive_clone.lua](lua/archive_clone.lua) | 对接 Archive 服务，配置路由和重置会话 |
-| [wechat_business.lua](lua/wechat_business.lua) | 查询微信业务能力与群成员，演示媒体、群和朋友圈调用 |
+| [微信业务开发](docs/wechat-business.md) | Lua 群成员查询示例、业务调用与回执查询 |
 | [lib/L.lua](lua/lib/L.lua) | 消息识别、会话处理与回复辅助库 |
 
 ### Python / WebSocket

@@ -40,7 +40,9 @@ local function on_message(event)
 end
 
 plugin.on("wechat.message.received", on_message)
--- Older Desktop builds do not support generic events or plugin.reply yet.
-if type(plugin.reply) == "function" then
-    plugin.on("message.received", on_message)
-end
+-- 微信走持久化事件；通用入口只处理其他平台，避免重复回复。
+plugin.on("message.received", function(event)
+    if event.message.platform ~= "wechat" then
+        return on_message(event)
+    end
+end)

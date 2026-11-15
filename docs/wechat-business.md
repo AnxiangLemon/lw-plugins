@@ -51,7 +51,7 @@ plugin.on("wechat.message.received", function(event)
 end)
 ```
 
-完整示例见 [wechat_business.lua](../lua/wechat_business.lua)，回复辅助函数见 [L.lua](../lua/lib/L.lua)。普通事件回调的返回值不终止其他插件；统一过滤应使用显式 prefilter。
+媒体业务示例见 [media_archive.lua](../lua/media_archive.lua) 和[使用说明](../lua/media_archive.md)，回复辅助函数见 [L.lua](../lua/lib/L.lua)。普通事件回调的返回值不终止其他插件；统一过滤应使用显式 prefilter。
 
 ## Python：默认等待与异步提交
 
@@ -82,7 +82,7 @@ result = await wx.calls.wait(accepted.call_id)
 
 ## 理解调用结果
 
-结果包含 `call_id`、`status`、`data`、`raw`、`messages` 和 `error`。所有业务调用记录日志，发送操作共用宿主的 outbox 和消息库。
+结果包含 `call_id`、`status`、`data`、`raw`、`messages` 和 `error`。业务调用进入插件调用账本；微信发送使用该账本内的发送任务和逐段回执，并关联聊天消息。这里的 `wechat_outbox` 属于当前微信执行器，与已删除的旧通用 outbox／后台重试链不同。Telegram 通过通用调用账本执行，以 `call_id` 查询结果。
 
 | 状态或字段 | 含义与处理 |
 | --- | --- |

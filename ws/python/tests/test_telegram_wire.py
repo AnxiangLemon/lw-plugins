@@ -35,11 +35,11 @@ class TelegramWireTests(unittest.IsolatedAsyncioTestCase):
             await ws.send(json.dumps({"type": "subscribe.ok", "events": ["message.received"]}))
             await ws.send(json.dumps(event("telegram", "tg:1", "123456", "987654")))
 
-            for outbox_id in (31, 32):
+            for call_id in ("call-31", "call-32"):
                 action = json.loads(await asyncio.wait_for(ws.recv(), 2))
                 frames.append(action)
                 await ws.send(json.dumps({"type": "action.ack", "action_id": action["action_id"],
-                                          "ok": True, "outbox_id": outbox_id, "delivered": True}))
+                                          "ok": True, "call_id": call_id, "status": "queued", "delivered": False}))
             await asyncio.wait_for(completed, 2)
 
         async with websockets.serve(host, "127.0.0.1", 0) as server:
@@ -63,7 +63,10 @@ class TelegramWireTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(frames[1]["platform"], "telegram")
         self.assertEqual(frames[0]["segments"][0]["data"]["text"], "pong")
         self.assertEqual((frames[1]["account_id"], frames[1]["to"]), ("123456", "987654"))
-        self.assertEqual([ack["outbox_id"] for ack in completed.result()], [31, 32])
+        self.assertEqual([ack["call_id"] for ack in completed.result()], ["call-31", "call-32"])
+        for ack in completed.result():
+            self.assertEqual(ack["status"], "queued")
+            self.assertFalse(ack["delivered"])
 
     async def test_third_platform_reply_and_concurrent_query_context(self):
         plugin = Plugin("test.platforms")
@@ -105,7 +108,7 @@ class TelegramWireTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((call["type"], call["method"]), ("api.call", "wechat.send"))
             self.assertEqual(call["params"]["options"]["idempotency_key"], "reply:wx:1:1")
             await ws.send(json.dumps({"type": "api.result", "req_id": call["req_id"],
-                                      "ok": True, "data": {"status": "delivered", "call_id": "call_1"}}))
+                                      "ok": True, "data": {"status": "succeeded", "call_id": "call_1"}}))
             await asyncio.wait_for(completed, 2)
 
         async with websockets.serve(host, "127.0.0.1", 0) as server:
@@ -118,7 +121,7 @@ class TelegramWireTests(unittest.IsolatedAsyncioTestCase):
 
             await asyncio.wait_for(plugin._session(), 3)
 
-        self.assertEqual(completed.result().status, "delivered")
+        self.assertEqual(completed.result().status, "succeeded")
 
     async def test_send_default_remains_wechat_even_inside_third_platform_callback(self):
         plugin = Plugin("test.send-default")

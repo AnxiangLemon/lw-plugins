@@ -84,7 +84,7 @@ Go 的旧 `MessageReceived` / `MessageSent` 为兼容已有群管家，继续指
 
 Go `Options.Wait` 使用 `*bool`，`nil` 表示宿主默认策略，`false` 只提交；Python 为 `wait=False`。`WaitTimeoutMS` / `wait_timeout_ms` 采用毫秒，客户端等待超时不会取消服务端任务。
 
-通用 action 回执是顶层 `action.ack`，不是 `api.result.data`。两端均保留 `call_id`、`status`、`outbox_id`、`delivered`；RPC 错误包含错误码，能取得时还保留原调用 ID、状态、账号与幂等键。`error.ref` 会立即关联到原请求，不再等成一个模糊的超时。
+通用 action 回执是顶层 `action.ack`，不是 `api.result.data`。两端均保留 `call_id`、`status`、`delivered`，Telegram 提交可返回 `queued` 且 `delivered=false`，后续通过 `calls` 查询；微信业务回执仍可能包含 `outbox_id`，不要用它查询通用账本；RPC 错误包含错误码，能取得时还保留原调用 ID、状态、账号与幂等键。`error.ref` 会立即关联到原请求，不再等成一个模糊的超时。
 
 `queued` / `running` 表示受理，`succeeded` 才表示宿主成功；`unknown` / `partial` 需要核对。Go `Result.Original` 和 Python 结果字典保留完整回执，区别于回执本身的 `raw`（服务端原始响应）。连接恢复、等待回执都不会重发业务。
 
