@@ -10,9 +10,11 @@ import traceback
 from contextlib import asynccontextmanager
 from collections import OrderedDict
 from contextvars import ContextVar
+from ipaddress import ip_address
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
 
 import websockets
+from websockets.exceptions import ConnectionClosed, ConnectionClosedOK
 
 from .endpoint import Endpoint, load_endpoint
 from .wechat import Wechat, source_event, new_key
@@ -28,7 +30,7 @@ Segments = Sequence[Dict[str, Any]]
 
 
 class PluginError(RuntimeError):
-    """宿主返回的错误（带协议错误码）。"""
+    """宿主协议或客户端连接错误（带错误码）。"""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")
@@ -154,10 +156,9 @@ class Plugin:
         self._max_concurrency = max(max_concurrency, 1)
         self._slots: Optional[asyncio.Semaphore] = None
         self._tasks: Set[asyncio.Task] = set()
-        self._durable_lock = asyncio.Lock()
         self._filters = []
         self.host_capabilities = frozenset()
-        self._ready = asyncio.Event()
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._managed_session: Optional[asyncio.Task] = None
         self._connect_handlers: List[Callable] = []
         self._disconnect_handlers: List[Callable] = []
@@ -165,17 +166,33 @@ class Plugin:
         self._connection_error: Optional[BaseException] = None
         self._session_running = False
         self._running = False
-        self._stopped = asyncio.Event()
         if handshake_timeout <= 0:
             raise ValueError("handshake_timeout must be positive")
         self._handshake_timeout = handshake_timeout
         self._subscription_accepted = False
+        self._hint_tail: Optional[asyncio.Task] = None
+        self._durable_tail: Optional[asyncio.Task] = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            self._bind_loop(loop)
+
+    def _bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        # Python 3.9 在构造时绑定 Event 和 Lock；同步入口随后会创建运行循环。
+        if self._loop is loop:
+            return
+        if self._running or self._session_running or self._managed_session is not None:
+            raise PluginError("already_connected", "plugin is active on another event loop")
+        self._loop = loop
+        self._ready = asyncio.Event()
+        self._stopped = asyncio.Event()
         # 会话开始后暂缓事件分发，订阅确认和初始化完成后才放行。
         self._events_ready = asyncio.Event()
         self._events_ready.set()
+        self._durable_lock = asyncio.Lock()
         self._hint_lock = asyncio.Lock()
-        self._hint_tail: Optional[asyncio.Task] = None
-        self._durable_tail: Optional[asyncio.Task] = None
 
     @property
     def host(self) -> HostInfo:
@@ -299,6 +316,7 @@ class Plugin:
             raise ValueError("connect timeout must be positive")
         if self._managed_session is not None or self._session_running or self._running:
             raise PluginError("already_connected", "plugin already has an active session")
+        self._bind_loop(asyncio.get_running_loop())
         self._closing = False
         self._stopped.clear()
         self._ready.clear()
@@ -312,9 +330,12 @@ class Plugin:
             if reader in done:
                 # 优先传播连接/握手错误，不能把一个已经关闭的会话当作可用连接。
                 reader.result()
-                raise PluginError("disconnected", "host closed connection before ready")
-            if ready not in done:
+            elif ready not in done:
                 raise PluginError("timeout", "host handshake or subscription timed out")
+            else:
+                ready.result()
+            if reader in done or not self.connected:
+                raise self._connection_error or PluginError("disconnected", "host closed connection before ready")
             yield self
         finally:
             ready.cancel()
@@ -336,11 +357,12 @@ class Plugin:
         """持续连接，按 1..30 秒退避；稳定连接一分钟后重置退避。"""
         if self._running or self._managed_session is not None or self._session_running:
             raise PluginError("already_connected", "plugin already has an active runner")
+        loop = asyncio.get_running_loop()
+        self._bind_loop(loop)
         self._running = True
         self._closing = False
         self._stopped.clear()
         backoff = 1.0
-        loop = asyncio.get_running_loop()
         try:
             while not self._closing:
                 started = loop.time()
@@ -364,6 +386,7 @@ class Plugin:
             self._running = False
 
     async def close(self) -> None:
+        self._bind_loop(asyncio.get_running_loop())
         self._closing = True
         self._stopped.set()
         self._ready.clear()
@@ -387,6 +410,7 @@ class Plugin:
     async def _session(self) -> None:
         if self._session_running:
             raise PluginError("already_connected", "plugin already has an active session")
+        self._bind_loop(asyncio.get_running_loop())
         self._session_running = True
         self._ready.clear()
         self._events_ready.clear()
@@ -395,11 +419,11 @@ class Plugin:
         self._hint_tail = None
         self._durable_tail = None
         try:
-            await self._serve_session()
+            close_reason = await self._serve_session()
             if self._connection_error is not None:
                 raise self._connection_error
             if not self._closing:
-                self._connection_error = PluginError("disconnected", "host closed connection")
+                self._connection_error = PluginError("disconnected", close_reason)
         except BaseException as exc:
             self._connection_error = exc
             raise
@@ -408,7 +432,7 @@ class Plugin:
             self._events_ready.clear()
             self._subscription_accepted = False
             self._ws = None
-            self._fail_pending("connection closed")
+            self._fail_pending(self._disconnect_reason() or "connection closed")
             # 先摘除引用，再等待取消，防止关闭期间再次收到取消留下旧初始化状态。
             initialization, self._initialization = self._initialization, None
             try:
@@ -424,7 +448,7 @@ class Plugin:
                 finally:
                     self._session_running = False
 
-    async def _serve_session(self) -> None:
+    async def _serve_session(self) -> str:
         endpoint: Endpoint = load_endpoint(
             url=self._explicit_url,
             token=self._explicit_token,
@@ -433,13 +457,24 @@ class Plugin:
         self._slots = asyncio.Semaphore(self._max_concurrency)
         # websockets 12/13 使用 extra_headers，14/15 默认 asyncio 实现改名为
         # additional_headers。按公开签名适配，统一走 Header，避免日志泄露 URL token。
-        header_name = "additional_headers" if "additional_headers" in inspect.signature(websockets.connect).parameters else "extra_headers"
-        auth = {header_name: {"Authorization": f"Bearer {endpoint.token}"}}
+        parameters = inspect.signature(websockets.connect).parameters
+        header_name = "additional_headers" if "additional_headers" in parameters else "extra_headers"
+        connect_options: Dict[str, Any] = {header_name: {"Authorization": f"Bearer {endpoint.token}"}}
+        # 本机 LW Tools 由回环地址访问，避免 websockets 15 将其交给系统代理。
+        if "proxy" in parameters:
+            try:
+                loopback = ip_address(endpoint.host).is_loopback
+            except ValueError:
+                loopback = endpoint.host.rstrip(".").lower() == "localhost"
+            if loopback:
+                connect_options["proxy"] = None
+        LOGGER.info("websocket opening: host=%s port=%s", endpoint.host, endpoint.port)
         async with websockets.connect(
             # CallResult preserves both data and raw: a 32 MiB download
             # appears twice after Base64 encoding in a single result frame.
-            endpoint.url, max_size=128 * 1024 * 1024, open_timeout=self._handshake_timeout, **auth
+            endpoint.url, max_size=128 * 1024 * 1024, open_timeout=self._handshake_timeout, **connect_options
         ) as ws:
+            LOGGER.info("websocket open: local=%s remote=%s", ws.local_address, ws.remote_address)
             self._ws = ws
             self._fail_pending("connection restarted")
             hello: Dict[str, Any] = {
@@ -459,10 +494,15 @@ class Plugin:
                     raise PluginError("timeout", "host handshake or subscription timed out") from None
                 if isinstance(raw, str):
                     await self._dispatch_frame(json.loads(raw))
-            async for raw in ws:
-                if isinstance(raw, bytes):
-                    continue
-                await self._dispatch_frame(json.loads(raw))
+            try:
+                while True:
+                    raw = await ws.recv()
+                    if isinstance(raw, str):
+                        await self._dispatch_frame(json.loads(raw))
+            except ConnectionClosedOK as exc:
+                return str(exc)
+            except ConnectionClosed as exc:
+                raise PluginError("disconnected", str(exc)) from exc
 
     async def _dispatch_frame(self, frame: Dict[str, Any]) -> None:
         kind = frame.get("type")
@@ -722,10 +762,9 @@ class Plugin:
             if self._request_timeout is None:
                 return await future
             return await asyncio.wait_for(future, timeout=self._request_timeout)
-        except websockets.exceptions.ConnectionClosed as exc:
-            raise PluginError("disconnected", "connection closed; query the original receipt") from exc
+        except ConnectionClosed as exc:
+            raise PluginError("disconnected", f"{exc}; query the original receipt") from exc
         except asyncio.TimeoutError as exc:
-            future.cancel()
             raise PluginError(
                 "timeout",
                 f"request {req_id} timed out after {self._request_timeout:g}s",
@@ -734,6 +773,10 @@ class Plugin:
             raise PluginError("connection_error", "transport failed; query the original receipt") from exc
         finally:
             self._pending.pop(req_id, None)
+            future.cancel()
+            if not future.cancelled():
+                # 发送协程和接收循环可能同时发现断线，取走未等待的 Future 异常。
+                future.exception()
 
     def _resolve_pending(self, frame: Dict[str, Any]) -> None:
         key = frame.get("req_id") or frame.get("action_id") or frame.get("ref")
@@ -746,12 +789,20 @@ class Plugin:
     def _fail_pending(self, reason: str) -> None:
         for future in self._pending.values():
             if not future.done():
-                future.set_exception(PluginError("internal", reason))
+                future.set_exception(PluginError("disconnected", f"{reason}; query the original receipt"))
         self._pending.clear()
+
+    def _disconnect_reason(self) -> Optional[str]:
+        error = self._connection_error
+        if not self._closing and isinstance(error, PluginError) and error.code == "disconnected":
+            return error.message
+        return None
 
     async def _send(self, frame: Dict[str, Any]) -> None:
         if self._ws is None:
-            raise PluginError("internal", "not connected")
+            reason = self._disconnect_reason()
+            message = f"not connected ({reason}); request was not sent" if reason else "not connected; request was not sent"
+            raise PluginError("disconnected", message)
         await self._ws.send(json.dumps(frame, ensure_ascii=False))
 
     def _next_id(self, prefix: str) -> str:

@@ -2,7 +2,7 @@
 
 [返回仓库首页](../../README.md) · [Go/Python 协议对照](../../docs/sdk-parity.md) · [微信业务调用](../../docs/wechat-business.md) · [接口面板](../../docs/wechat-panel.md) · [开发与测试](../../docs/development.md)
 
-`lwplugin` 是 LW Tools 的异步 WS 插件客户端 SDK，当前版本 **2.4.0**，要求 Python 3.9+ 和宿主协议 v2。源码、安装配置、测试和可运行示例均在本仓库维护。开发插件只需安装本 SDK，并连接支持相应能力的宿主。
+`lwplugin` 是 LW Tools 的异步 WS 插件客户端 SDK，当前版本 **2.4.1**，要求 Python 3.9+、`websockets>=12,<16` 和宿主协议 v2。源码、安装配置、测试和可运行示例均在本仓库维护。
 
 ## 安装
 
@@ -17,6 +17,8 @@ python -m pip install -e './ws/python[panel]'
 ```
 
 `-e` 表示可编辑安装；部署时也可执行 `python -m pip install ./ws/python` 安装普通副本。安装配置见 [pyproject.toml](pyproject.toml)，SDK 代码位于 [lwplugin/](lwplugin/)。
+
+更新源码后，用启动插件的同一个 Python 重新执行安装命令，并重启插件进程。
 
 ### 快速验证
 
@@ -52,6 +54,14 @@ print(receipt.status)
 ```
 
 `wait_result` 只查询原调用，直到状态不再为 `queued` / `running`。`unknown` / `partial` / `failed` 原样返回；超时抛出 `asyncio.TimeoutError`，不会取消或重新发送原业务。
+
+发图报 `Message too long` 时，检查宿主的 WS 单条消息上限。这个上限计算的是 Base64 编码后的完整 JSON 消息。[媒体尺寸和宿主设置](../../docs/wechat-business.md#接口与参数)
+
+## 2.4.1 修复
+
+- Python 3.9 在实际运行 SDK 的事件循环中创建连接事件和锁。可以先在同步代码构造 `Plugin`，再用 `run()`、`run_async()` 或 `connect()` 启动。
+- `websockets` 15 连接本机回环地址时直连。日志记录传输连接和订阅阶段，便于对照宿主日志。
+- 连接中断时，待回执请求收到 `PluginError`，错误码为 `disconnected`，并保留能取得的 WebSocket 关闭原因和原请求的 `idempotency_key`。可在重新连接后查询原回执。
 
 ## 2.4.0 对齐更新
 

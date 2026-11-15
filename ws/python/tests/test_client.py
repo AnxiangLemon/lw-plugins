@@ -61,6 +61,24 @@ class ConnectionTests(unittest.IsolatedAsyncioTestCase):
         self.image = Path(self.directory.name) / "image.png"
         self.image.write_bytes(b"\x89PNG\r\n\x1a\nfixture")
 
+    async def test_connect_uses_the_running_loop_after_plugin_creation(self):
+        async def host(ws):
+            await ws.recv()
+            await ws.send(json.dumps({"type": "hello.ok", "events": []}))
+            await ws.recv()
+            await ws.send(json.dumps({"type": "subscribe.ok", "events": []}))
+            await ws.wait_closed()
+
+        async with websockets.serve(host, "127.0.0.1", 0) as server:
+            port = server.sockets[0].getsockname()[1]
+
+            async def create_plugin():
+                return Plugin("test.loop", events=[], url=f"ws://127.0.0.1:{port}", token="fixture")
+
+            plugin = await asyncio.to_thread(asyncio.run, create_plugin())
+            async with plugin.connect(timeout=2):
+                self.assertTrue(plugin.connected)
+
     async def test_connect_waits_for_subscription_before_allowing_send(self):
         subscribed = asyncio.Event()
         release = asyncio.Event()
@@ -123,6 +141,35 @@ class ConnectionTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(raised.exception.code, "disabled")
             self.assertIsNone(plugin._managed_session)
 
+    async def test_disconnect_preserves_close_reason_and_pending_send_key(self):
+        frames = []
+
+        async def host(ws):
+            await ws.recv()
+            await ws.send(json.dumps({"type": "hello.ok", "events": []}))
+            await ws.recv()
+            await ws.send(json.dumps({"type": "subscribe.ok", "events": []}))
+            frames.append(json.loads(await ws.recv()))
+            await ws.close(code=1000, reason="server stopped")
+
+        async with websockets.serve(host, "127.0.0.1", 0) as server:
+            plugin = Plugin("test.disconnect", events=[],
+                            url=f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}", token="fixture")
+            async with plugin.connect(timeout=2):
+                wx = plugin.wechat("wxid_test")
+                with self.assertRaisesRegex(PluginError, "server stopped.*query the original receipt") as pending:
+                    await wx.send_text("room", "first", idempotency_key="first")
+                self.assertEqual(pending.exception.code, "disconnected")
+                self.assertEqual(pending.exception.idempotency_key, "first")
+                self.assertEqual(pending.exception.account_id, "wxid_test")
+
+                with self.assertRaisesRegex(PluginError, "not connected.*server stopped.*request was not sent") as offline:
+                    await wx.send_text("room", "second", idempotency_key="second")
+                self.assertEqual(offline.exception.code, "disconnected")
+                self.assertEqual(offline.exception.idempotency_key, "second")
+
+        self.assertEqual([frame["params"]["options"]["idempotency_key"] for frame in frames], ["first"])
+
     async def test_missing_subscribe_ack_times_out_and_closes_socket(self):
         closed = asyncio.Event()
 
@@ -136,7 +183,7 @@ class ConnectionTests(unittest.IsolatedAsyncioTestCase):
         async with websockets.serve(host, "127.0.0.1", 0) as server:
             plugin = Plugin("test.timeout", events=[], url=f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}", token="fixture")
             with self.assertRaises(PluginError) as raised:
-                async with plugin.connect(timeout=0.1):
+                async with plugin.connect(timeout=0.5):
                     self.fail("business code must not run without subscription acknowledgement")
             self.assertEqual(raised.exception.code, "timeout")
             await asyncio.wait_for(closed.wait(), 2)

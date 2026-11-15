@@ -18,7 +18,9 @@
 
 文件可先 `cdn.get_dns` 再调用 `msg.send_file`，参数为 `toWxid`、`fileName`、`base64`。也可使用 Python `file_segment(base64, file_name)` / `video_segment(base64, cover_base64)` 通过 `wx.send` 发送；视频时长由 MP4 解析。上传成功与发送成功分开判断，分步发送时原样配对上传结果的 `fileId`、`aesKey` 和明文 `rawSize`。
 
-文件/视频正文最大 32 MiB、封面最大 5 MiB、语音最大 2 MiB；Base64 会增加约三分之一体积。新版默认 WS 请求与面板容量为 64 MiB，Python WS 接收上限为 128 MiB，以容纳下载结果中 data/raw 两份原文；旧宿主配置中显式的较小 `plugin_ws.max_frame_bytes` 仍有效，需要大文件时设为 `67108864` 并重启 WS 服务。媒体格式与更细限制以面板字段说明为准。
+文件和视频正文最大 32 MiB，封面最大 5 MiB，语音最大 2 MiB。Base64 编码会增加约三分之一体积，宿主按完整 JSON 消息计算 WS 大小。新版宿主的 WS 请求与面板默认容量为 64 MiB。Python WS 接收上限为 128 MiB，可容纳下载结果中 `data` 和 `raw` 的两份原文。媒体格式与更细限制见面板字段说明。
+
+收到 `Message too long` 时，在 LW Tools 的「插件 → WS 插件 → 服务设置」将「消息大小上限（字节）」设为 `67108864`（64 MiB）。保存会重启运行中的 WS 服务，启用自动重连的插件会重新接入。使用旧版宿主时，完全退出应用，在数据目录的 `config/lwcli.toml` 中将 `[plugin_ws]` 的 `max_frame_bytes` 改为 `67108864`，再启动应用。显式保存的上限会继续生效。
 
 分页使用各接口返回的实际游标、offset 和继续/结束标志，不自动按页码递增，不混用 SNS/Favor/登录游标。TenPay 预查询、领取、转账查询、收款和退款都是独立动作，不自动执行下一步；结果不确定时先查询原回执与实际业务状态。返回的 PB 逐项状态及支付业务状态还需按接口检查。
 

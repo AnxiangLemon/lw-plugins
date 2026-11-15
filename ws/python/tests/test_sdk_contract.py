@@ -169,7 +169,7 @@ class WireParityTests(unittest.IsolatedAsyncioTestCase):
         async with websockets.serve(host, '127.0.0.1', 0) as server:
             plugin = Plugin('test.handshake', events=[], reconnect=False,
                             url=f'ws://127.0.0.1:{server.sockets[0].getsockname()[1]}',
-                            token='fixture', handshake_timeout=0.1)
+                            token='fixture', handshake_timeout=0.5)
             plugin.on_disconnect(lambda error: disconnected.append(error))
             with self.assertLogs('lwplugin', level='WARNING'):
                 await asyncio.wait_for(plugin.run_async(), 2)

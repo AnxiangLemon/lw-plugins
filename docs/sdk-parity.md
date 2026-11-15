@@ -2,7 +2,7 @@
 
 [Go SDK](../ws/go/README.md) · [Python SDK](../ws/python/README.md) · [群事件](group-events.md) · [微信业务](wechat-business.md)
 
-本文以当前 Rust 宿主的 WS v2 协议为准。Python 当前源码版本为 **2.4.0**；Go module 仍位于 `ws/go`，尚未发布新的版本 tag。两套 SDK 共用协议、事件和业务字段；函数命名遵循各自语言惯例，不要求调用代码逐字相同。
+本文以当前 Rust 宿主的 WS v2 协议为准。Python 当前源码版本为 **2.4.1**。Go module 位于 `ws/go`，尚未发布新的版本 tag。两套 SDK 共用协议、事件和业务字段，函数命名遵循各自语言惯例。
 
 ## 接口覆盖范围
 
@@ -157,4 +157,4 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 - Go：SDK `go test -race ./...`、`go vet ./...` 和现有群管家测试通过。
 - 真实 Rust 宿主 + 模拟业务服务：Python 164 个接口入口、示例和重连回执通过；Go 群提示、完整名单差集和 SQLite 入退群日志链路通过。
 - Python wheel 构建、干净目录安装及导出检查通过；包内没有测试图片、真实端点或编译产物。测试 wheel 仅在临时目录生成，未上传包仓库。
-- Python 3.9 完成语法兼容检查，未在本机安装并执行 3.9 运行时。
+- Python 2.4.1 在 Windows Python 3.9、3.13 与 3.14 上通过 SDK 回归，覆盖跨事件循环启动和断线恢复。
