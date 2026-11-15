@@ -2,6 +2,7 @@
   "events": [
     "wechat.group.refresh_hint",
     "wechat.sync.hint",
+    "wechat.message.observed",
     "wechat.message.received",
     "wechat.message.sent",
     "wechat.call.updated",

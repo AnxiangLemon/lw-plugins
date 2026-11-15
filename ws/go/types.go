@@ -12,6 +12,7 @@ const (
 	MessageSent            = "wechat.message.sent"
 	WechatMessageReceived  = MessageReceived
 	WechatMessageSent      = MessageSent
+	WechatMessageObserved  = "wechat.message.observed"
 	GenericMessageReceived = "message.received"
 	GenericMessageSent     = "message.sent"
 	MessageFilter          = "wechat.message.filter"
@@ -25,7 +26,7 @@ const (
 // AllEvents 返回宿主 v2 的完整事件目录副本，不代表应订阅全部事件。
 // 微信专用与通用消息可能描述同一条消息，请按需要选择一个通道。
 func AllEvents() []string {
-	return []string{GroupRefreshHint, SyncHint, WechatMessageReceived, WechatMessageSent,
+	return []string{GroupRefreshHint, SyncHint, WechatMessageObserved, WechatMessageReceived, WechatMessageSent,
 		CallUpdated, MessageFilter, GenericMessageReceived, GenericMessageSent, AccountOnline, AccountOffline}
 }
 
@@ -59,19 +60,21 @@ func Text(text string) Segment { return Segment{Type: "text", Data: map[string]s
 
 // Message 与宿主 v2 DTO 对齐。Raw 保留平台原文，业务不要只依赖显示文本。
 type Message struct {
-	ID        string          `json:"msg_id"`
-	Peer      string          `json:"peer"`
-	PeerID    string          `json:"peer_id"`
-	Platform  string          `json:"platform"`
-	ChatType  string          `json:"chat_type"`
-	IsGroup   bool            `json:"is_group"`
-	From      Peer            `json:"from"`
-	To        Peer            `json:"to"`
-	Text      string          `json:"text"`
-	Timestamp int64           `json:"timestamp"`
-	Direction string          `json:"direction"`
-	Segments  []Segment       `json:"segments"`
-	Raw       json.RawMessage `json:"raw"`
+	ID              string          `json:"msg_id"`
+	Peer            string          `json:"peer"`
+	PeerID          string          `json:"peer_id"`
+	Platform        string          `json:"platform"`
+	ChatType        string          `json:"chat_type"`
+	IsGroup         bool            `json:"is_group"`
+	From            Peer            `json:"from"`
+	To              Peer            `json:"to"`
+	Text            string          `json:"text"`
+	Timestamp       int64           `json:"timestamp"`
+	Direction       string          `json:"direction"`
+	Segments        []Segment       `json:"segments"`
+	Raw             json.RawMessage `json:"raw"`
+	SourceMessageID string          `json:"source_message_id,omitempty"`
+	FormatVersion   int             `json:"format_version,omitempty"`
 }
 
 // Conversation 兼容 peer_id 和 peer 两种会话字段。

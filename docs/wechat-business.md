@@ -53,7 +53,7 @@ plugin.on("wechat.message.received", function(event)
 end)
 ```
 
-媒体业务示例见 [media_archive.lua](../lua/media_archive.lua) 和[使用说明](../lua/media_archive.md)，回复辅助函数见 [L.lua](../lua/lib/L.lua)。普通事件回调的返回值不终止其他插件；统一过滤应使用显式 prefilter。
+回复辅助函数见 [L.lua](../lua/lib/L.lua)。普通事件回调的返回值不终止其他插件；统一过滤应使用显式 prefilter。
 
 ## Python：默认等待与异步提交
 

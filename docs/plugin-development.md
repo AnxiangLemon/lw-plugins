@@ -69,7 +69,7 @@ python my_plugin.py
 
 开发自己的插件时，可复制 [demo.lua](../lua/demo.lua)，修改 `PLUGIN_ID`、`PLUGIN_TITLE`、`PLUGIN_VERSION` 和业务处理函数。保留稳定的插件 ID，避免同时加载两个相同 ID 的脚本。修改后在宿主重新加载；共享库更新时也要重新加载引用它的插件。
 
-Lua 使用 `plugin.on("wechat.message.received", handler)` 订阅微信事件，`plugin.wechat(account_id)` 获取业务调用对象。示例通过 `L.reply` 回复，业务 API 见[业务指南中的完整 Lua 示例](wechat-business.md#lua接收事件并调用接口)，媒体调用见 [media_archive.lua](../lua/media_archive.lua)。
+Lua 使用 `plugin.on("wechat.message.received", handler)` 订阅微信事件，`plugin.wechat(account_id)` 获取业务调用对象。示例通过 `L.reply` 回复，业务 API 见[业务指南中的完整 Lua 示例](wechat-business.md#lua接收事件并调用接口)。
 
 ## 事件与发送平台
 
