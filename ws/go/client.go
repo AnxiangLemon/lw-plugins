@@ -68,6 +68,7 @@ type frame struct {
 	CallID   string          `json:"call_id"`
 	Status   string          `json:"status"`
 	Raw      json.RawMessage `json:"-"`
+	Cause    error           `json:"-"`
 }
 
 // New 校验插件 ID，复制订阅配置；不会立即建立网络连接。
@@ -269,17 +270,22 @@ func (c *Client) session(parent context.Context) (sessionErr error) {
 	c.mu.Unlock()
 	workerDone := make(chan error, 1)
 	defer func() {
-		cancel()
 		conn.Close()
+		disconnect := frame{Code: "disconnected", Message: "连接已断开，请按原幂等键查询结果", Cause: sessionErr}
+		if sessionErr != nil {
+			disconnect.Message = fmt.Sprintf("连接已断开（%v），请按原幂等键查询结果", sessionErr)
+		}
 		c.mu.Lock()
 		if c.conn == conn {
 			c.conn = nil
 			for id, ch := range c.pending {
-				ch <- frame{Code: "disconnected", Message: "连接已断开；请按原幂等键查询结果"}
+				ch <- disconnect
 				delete(c.pending, id)
 			}
 		}
 		c.mu.Unlock()
+		// 先交付断线原因，再取消回调的会话 context。
+		cancel()
 		// 旧回调须先退出，防止下一次初始化后继续写入旧快照。
 		if workerErr := <-workerDone; workerErr != nil {
 			sessionErr = workerErr
@@ -350,7 +356,7 @@ func frameError(f frame, fallback, message string) *RPCError {
 	} else if f.Reason != "" {
 		message = f.Reason
 	}
-	return &RPCError{Code: fallback, Message: message, CallID: f.CallID, Status: f.Status}
+	return &RPCError{Code: fallback, Message: message, CallID: f.CallID, Status: f.Status, Cause: f.Cause}
 }
 func (c *Client) remember(event Event) {
 	if event.ID == "" {
@@ -465,24 +471,30 @@ func (c *Client) request(parent context.Context, value map[string]any, out any) 
 		}
 		return err
 	}
+	var response frame
 	select {
+	case response = <-ch:
 	case <-ctx.Done():
-		return &RPCError{Code: "timeout", Message: "等待已结束，业务可能仍在执行，请查询原回执", Cause: ctx.Err()}
-	case response := <-ch:
-		if !response.OK {
-			return frameError(response, "internal", "宿主请求失败")
+		// 会话关闭时两种通知都可能就绪，优先读取已经交付的结果。
+		select {
+		case response = <-ch:
+		default:
+			return &RPCError{Code: "timeout", Message: "等待已结束，业务可能仍在执行，请查询原回执", Cause: ctx.Err()}
 		}
-		if out == nil {
-			return nil
-		}
-		if response.Type == "action.ack" {
-			return Decode(response.Raw, out)
-		}
-		if len(response.Data) == 0 {
-			response.Data = json.RawMessage("null")
-		}
-		return Decode(response.Data, out)
 	}
+	if !response.OK {
+		return frameError(response, "internal", "宿主请求失败")
+	}
+	if out == nil {
+		return nil
+	}
+	if response.Type == "action.ack" {
+		return Decode(response.Raw, out)
+	}
+	if len(response.Data) == 0 {
+		response.Data = json.RawMessage("null")
+	}
+	return Decode(response.Data, out)
 }
 
 // Log 将普通诊断文字写到宿主日志。详细业务审计仍应由插件自行持久化。

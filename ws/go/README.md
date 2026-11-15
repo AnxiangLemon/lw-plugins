@@ -94,7 +94,7 @@ queryErr := wx.Query(queryCtx, "find", map[string]any{"idempotency_key": key}, &
 _ = result; _ = err; _ = queryErr
 ```
 
-RPC 成功与业务成功不同：`err == nil` 后仍检查 Result.Status，原始 PB 逐项状态按具体业务核对。Data/Raw/Event.Raw 使用 json.RawMessage；动态 map 使用 `lwplugin.Decode`，避免 uint64 ID 变成 float64。RPCError 保留 Key/AccountID，超时支持 errors.Is(err, context.DeadlineExceeded)。重连不会自动重发在途 API。
+`err == nil` 表示 RPC 成功，业务执行状态通过 `Result.Status` 核对。Data/Raw/Event.Raw 使用 `json.RawMessage`，动态 map 可通过 `lwplugin.Decode` 保留 uint64 ID 精度。`RPCError` 保留 `Key` 和 `AccountID`。超时可用 `errors.Is(err, context.DeadlineExceeded)` 检查。等待回执期间收到 WebSocket 关闭帧时，调用返回 `disconnected`，可用 `errors.As` 读取 `*websocket.CloseError`。重连后通过原 `Key` 查询回执。
 
 ## 事件与回调
 
@@ -114,6 +114,8 @@ Python SDK 的对应能力、两端事件顺序差异与监控业务边界见[�
 
 消息段提供 `Text`、`At`、`Image`、`ImageFile`、`Voice`、`Video`、`File`、`WechatSegment`，与 Python 结构一致。`ImageFile` 读取插件本地文件，`Wechat.SendImage` 负责提交；如业务需要 CDN DNS 准备，先显式调用 `cdn.get_dns`。视频时长不再作为 `playLength` 发送。
 
+消息大小上限按 Base64 编码后的整条 JSON 计算。遇到 `Message too long` 时，在 LW Tools 的「插件 → WS 插件」服务设置中检查消息大小上限。升级保留已保存的 `plugin_ws.max_frame_bytes`，旧配置可能低于当前的 64 MiB 默认值。
+
 ## 测试与发布
 
 ```powershell
@@ -121,6 +123,6 @@ go test -race ./...
 go vet ./...
 ```
 
-测试使用临时 WS 服务，覆盖认证、回调内 RPC、大整数、乱序响应、重复 ACK、超时不重发和账号范围。群管家是独立模块，需要进入其目录单独测试。
+测试使用临时 WS 服务，覆盖认证、回调内 RPC、大整数、乱序响应、重复 ACK、断线原因、重连后的幂等处理和账号范围。群管家是独立模块，需要进入其目录单独测试。
 
 当前源码可在仓库内直接构建。将来发布 SDK module 时使用 `ws/go/v0.2.0` 这种子目录 tag，使用者固定到实际发布版本；不要将尚未发布的 tag 宣称为可安装版本。提交 go.mod/go.sum/LICENSE，保留 `testdata/sdk-contract.json` 和测试；排除端点、凭据、日志、数据库和编译产物。使用 [MIT License](LICENSE)，依赖遵循各自许可证。

@@ -245,10 +245,12 @@ func TestOutOfOrderConcurrentRPC(t *testing.T) {
 	<-done
 }
 
-// 已经写出的业务帧遇到断线时只报不确定，不因为恢复连接而重新发出。
+// 已经写出的业务帧遇到断线时保留原因，重连后不重新发出。
 func TestReconnectNeverReplaysInflightMutation(t *testing.T) {
+	const closeReason = "websocket error: Space limit exceeded: Message too long"
 	var calls, connections atomic.Int32
 	restored := make(chan struct{})
+	callError := make(chan error, 1)
 	s := endpointServer(t, func(conn *websocket.Conn) {
 		for {
 			var f map[string]any
@@ -257,6 +259,9 @@ func TestReconnectNeverReplaysInflightMutation(t *testing.T) {
 			}
 			if f["method"] == "wechat.call" {
 				calls.Add(1)
+				if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, closeReason), time.Now().Add(time.Second)); err != nil {
+					t.Error(err)
+				}
 				return
 			}
 		}
@@ -266,6 +271,7 @@ func TestReconnectNeverReplaysInflightMutation(t *testing.T) {
 	c, _ := New(Config{ID: "test.go", URL: "ws" + strings.TrimPrefix(s.URL, "http"), Token: "test-token", Logger: quiet(), OnConnect: func(ctx context.Context, c *Client, _ HostInfo) error {
 		if connections.Add(1) == 1 {
 			_, err := c.Wechat("wxid_a").Call(ctx, "msg.send_text_message", map[string]string{"toWxid": "friend", "content": "hello"}, Options{Key: "lost-result"})
+			callError <- err
 			return err
 		}
 		close(restored)
@@ -273,6 +279,18 @@ func TestReconnectNeverReplaysInflightMutation(t *testing.T) {
 	}})
 	done := make(chan error, 1)
 	go func() { done <- c.Run(ctx) }()
+	select {
+	case err := <-callError:
+		var rpc *RPCError
+		var closeErr *websocket.CloseError
+		if !errors.As(err, &rpc) || rpc.Code != "disconnected" || rpc.Key != "lost-result" ||
+			rpc.AccountID != "wxid_a" || !strings.Contains(rpc.Message, closeReason) ||
+			!errors.As(err, &closeErr) || closeErr.Code != websocket.CloseNormalClosure {
+			t.Errorf("断线错误缺少原始原因或请求信息: %v", err)
+		}
+	case <-ctx.Done():
+		t.Fatal("没有收到在途调用错误")
+	}
 	select {
 	case <-restored:
 	case <-ctx.Done():
