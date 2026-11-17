@@ -29,5 +29,6 @@ secret.key
 /ws/go/group-manager/group-manager.exe
 /ws/go/examples/echo/echo
 /ws/go/examples/echo/echo.exe
+/ws/rust/target/
 .DS_Store
 Thumbs.db

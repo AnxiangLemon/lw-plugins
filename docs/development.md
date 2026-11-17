@@ -20,6 +20,7 @@ lw-plugins/
 │   ├── tests/             # SDK 单元测试与协议测试
 │   ├── wechat_panel/      # 面板静态资源与公开接口目录
 │   └── *.py              # 可运行插件示例
+├── ws/rust/               # Rust WS 客户端 SDK、示例与协议测试
 ├── tests/                 # 面板、目录生成器测试与模拟流程 fixture
 └── tools/                 # 接口目录生成工具
 ```
@@ -111,3 +112,7 @@ Go SDK 位于 `ws/go/`，要求 Go 1.23+。微信群管家位于 `ws/go/group-ma
 修改群管家前端后，在 `ws/go/group-manager/frontend/` 运行 `npm ci`、`npm run lint`、`npm test` 和 `npm run build`。构建会同步 `ws/go/group-manager/internal/manager/web/`，提交时将更新后的内嵌资源与前端源码一并提交。这样从干净检出可以直接运行群管家的 Go 测试和构建。
 
 发布与运行命令见 [Go SDK](../ws/go/README.md) 和 [微信群管家](../ws/go/group-manager/README.md)。
+
+## Rust SDK
+
+在仓库根目录运行 `cargo test --locked --manifest-path ws/rust/Cargo.toml --all-targets`。测试在本机启动模拟 WS 宿主。引用方式与运行示例见 [Rust SDK](../ws/rust/README.md)。

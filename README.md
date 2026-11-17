@@ -1,6 +1,6 @@
 # LW Plugins
 
-LW Tools 的 Lua 插件、Go 和 Python WebSocket SDK、微信群管家与微信接口面板。插件通过 Lua API 或 WebSocket 使用宿主提供的账号和业务能力。运行测试和模拟面板只需要本仓库，连接实际账号需要兼容的 LW Desktop 或 Web 宿主。
+LW Tools 的 Lua 插件、Go、Python 和 Rust WebSocket SDK、微信群管家与微信接口面板。插件通过 Lua API 或 WebSocket 使用宿主提供的账号和业务能力。运行测试和模拟面板只需要本仓库，连接实际账号需要兼容的 LW Desktop 或 Web 宿主。
 
 ## 从这里开始
 
@@ -12,6 +12,7 @@ LW Tools 的 Lua 插件、Go 和 Python WebSocket SDK、微信群管家与微信
 | 在浏览器中调试微信接口 | [微信接口面板](docs/wechat-panel.md) |
 | 编写 Python WS 插件 | [lwplugin SDK](ws/python/README.md) |
 | 编写 Go WS 插件 | [Go SDK](ws/go/README.md) |
+| 编写 Rust WS 插件 | [Rust SDK](ws/rust/README.md) |
 | 构建微信群管家 | [群管家说明](ws/go/group-manager/README.md) |
 | 编写微信业务调用 | [微信业务开发](docs/wechat-business.md) |
 | 运行测试或更新接口目录 | [开发与调试](docs/development.md) |
