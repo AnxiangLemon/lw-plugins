@@ -26,8 +26,6 @@ plugin-endpoint.json
 secret.key
 /ws/go/echo
 /ws/go/echo.exe
-/ws/go/group-manager/group-manager
-/ws/go/group-manager/group-manager.exe
 /ws/go/bot-hub/bot-hub
 /ws/go/bot-hub/bot-hub.exe
 /ws/go/examples/echo/echo

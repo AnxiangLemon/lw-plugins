@@ -1,6 +1,6 @@
 # LW Plugins
 
-LW Tools 的 Lua 插件、Go、Python 和 Rust WebSocket SDK、微信群管家、Bot Hub 多平台群管与监控中心及微信接口面板。插件通过 Lua API 或 WebSocket 使用宿主提供的账号和业务能力。运行测试和模拟面板只需要本仓库，连接实际账号需要兼容的 LW Desktop 或 Web 宿主。
+LW Tools 的 Lua 插件、Go、Python 和 Rust WebSocket SDK、Bot Hub 多平台群管与监控中心及微信接口面板。插件通过 Lua API 或 WebSocket 使用宿主提供的账号和业务能力。运行测试和模拟面板只需要本仓库，连接实际账号需要兼容的 LW Desktop 或 Web 宿主。
 
 ## 从这里开始
 
@@ -13,7 +13,6 @@ LW Tools 的 Lua 插件、Go、Python 和 Rust WebSocket SDK、微信群管家�
 | 编写 Python WS 插件 | [lwplugin SDK](ws/python/README.md) |
 | 编写 Go WS 插件 | [Go SDK](ws/go/README.md) |
 | 编写 Rust WS 插件 | [Rust SDK](ws/rust/README.md) |
-| 构建微信群管家 | [群管家说明](ws/go/group-manager/README.md) |
 | 运行多平台群管与监控转发中心 | [LW Bot Hub](ws/go/bot-hub/README.md) |
 | 编写微信业务调用 | [微信业务开发](docs/wechat-business.md) |
 | 运行测试或更新接口目录 | [开发与调试](docs/development.md) |
@@ -53,7 +52,6 @@ python ws/python/wechat_panel.py --demo
 | 目录 | 用途 |
 | --- | --- |
 | [ws/go](ws/go/README.md) | Go WebSocket 插件 SDK（支持通用消息、微信业务与 Telegram Bot API） |
-| [ws/go/group-manager](ws/go/group-manager/README.md) | 微信群管家：成员快照审计、邀请人排行与日常群管理面板 |
 | [ws/go/bot-hub](ws/go/bot-hub/README.md) | LW Bot Hub：微信/Telegram 群管、全平台黑名单与跨平台消息监控转发中心 |
 
 ### Python / WebSocket

@@ -13,7 +13,7 @@ lw-plugins/
 ├── lua/                   # 宿主直接加载的 Lua 插件
 │   └── lib/L.lua          # 共享辅助库
 ├── ws/go/                 # Go WS SDK 与两端共用的协议测试数据
-│   └── group-manager/     # 群管家独立 Go 模块与前端工程
+│   └── bot-hub/           # LW Bot Hub 独立 Go 模块（含内嵌 Web 面板）
 ├── ws/python/
 │   ├── pyproject.toml     # lwplugin 安装配置与 panel 可选依赖
 │   ├── lwplugin/          # Python WS SDK
@@ -105,13 +105,11 @@ python tools/build_wechat_panel_catalog.py --methods-file 'C:\path\to\wechat-met
 - 文档使用一个一级标题、逐级小节、带语言的代码块及仓库内相对链接。
 - 示例路径使用占位符。将端点文件、账号凭据、日志、数据库、本地备份及临时构建文件留在本地。
 
-## Go SDK 与微信群管家
+## Go SDK 与 Bot Hub
 
-Go SDK 位于 `ws/go/`，要求 Go 1.23+。微信群管家位于 `ws/go/group-manager/`，要求 Go 1.26+。分别进入两个模块运行 `go test -race ./...` 和 `go vet ./...`。
+Go SDK 位于 `ws/go/`，要求 Go 1.23+。LW Bot Hub 位于 `ws/go/bot-hub/`，内嵌原生 HTML/CSS/JS 管理面板（零前端构建与运行依赖）。分别进入两个模块运行 `go test -race ./...` 和 `go vet ./...`。
 
-修改群管家前端后，在 `ws/go/group-manager/frontend/` 运行 `npm ci`、`npm run lint`、`npm test` 和 `npm run build`。构建会同步 `ws/go/group-manager/internal/manager/web/`，提交时将更新后的内嵌资源与前端源码一并提交。这样从干净检出可以直接运行群管家的 Go 测试和构建。
-
-发布与运行命令见 [Go SDK](../ws/go/README.md) 和 [微信群管家](../ws/go/group-manager/README.md)。
+发布与运行命令见 [Go SDK](../ws/go/README.md) 和 [LW Bot Hub](../ws/go/bot-hub/README.md)。
 
 ## Rust SDK
 

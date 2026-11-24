@@ -2,17 +2,17 @@
 
 轻量的 LW Tools WebSocket 协议 v2 客户端，package 名为 `lwplugin`。Go 1.23+，直接依赖只有 `gorilla/websocket`；数据库和页面均不属于 SDK。编译后的插件运行时不需要安装 Go 或 Python。
 
-[仓库首页](../../README.md) · [Go/Python 协议对照](../../docs/sdk-parity.md) · [微信群管家](group-manager/README.md) · [Bot Hub](bot-hub/README.md) · [完整最小示例](examples/echo/main.go)
+[仓库首页](../../README.md) · [Go/Python 协议对照](../../docs/sdk-parity.md) · [Bot Hub](bot-hub/README.md) · [完整最小示例](examples/echo/main.go)
 
 ## 本次对齐更新
 
-已补齐通用平台发送/回复、Telegram Bot API 转发与文件下载、调用账本查询、显式微信过滤、媒体构造函数及单次会话。公开事件与 Python 对齐为 17 种（含 6 种 Telegram 交互与群管事件）；错误、回执和事件保留可追踪字段，`Result.OutboxIDText` 同时兼容数值型与字符串型 `outbox_id`。旧 `MessageReceived` / `MessageSent` 的微信语义不变，现有群管家可以继续编译。
+已补齐通用平台发送/回复、Telegram Bot API 转发与文件下载、调用账本查询、显式微信过滤、媒体构造函数及单次会话。公开事件与 Python 对齐为 17 种（含 6 种 Telegram 交互与群管事件）；错误、回执和事件保留可追踪字段，`Result.OutboxIDText` 同时兼容数值型与字符串型 `outbox_id`。旧 `MessageReceived` / `MessageSent` 的微信语义不变，以保持向后兼容。
 
 没有新增第三方依赖。源码尚未创建发布 tag；新 API、兼容变化与发布方式见[完整对照](../../docs/sdk-parity.md)。
 
 ## 目录与连接
 
-`endpoint.go` 负责端点发现，`client.go` 负责连接/订阅/并发 RPC，`types.go` 定义 DTO，`wechat.go` 封装微信调用和回执，`telegram.go` 封装 Telegram Bot API 调用、内联 Base64 文件上传与 `download_file`，`actions.go` 处理多平台发送与账本，`media.go` 构造媒体消息段。`group-manager/` 与 `bot-hub/` 均为独立 Go module，SQLite 等业务依赖不进入 SDK 模块。
+`endpoint.go` 负责端点发现，`client.go` 负责连接/订阅/并发 RPC，`types.go` 定义 DTO，`wechat.go` 封装微信调用和回执，`telegram.go` 封装 Telegram Bot API 调用、内联 Base64 文件上传与 `download_file`，`actions.go` 处理多平台发送与账本，`media.go` 构造媒体消息段。`bot-hub/` 是独立 Go module，应用级业务与面板不进入 SDK 模块。
 
 在 Desktop 的“插件 → WS 插件”启动服务，并允许插件 ID 接入：
 
@@ -125,6 +125,6 @@ go test -race ./...
 go vet ./...
 ```
 
-测试使用临时 WS 服务，覆盖认证、回调内 RPC、大整数、乱序响应、重复 ACK、断线原因、重连后的幂等处理和账号范围。群管家是独立模块，需要进入其目录单独测试。
+测试使用临时 WS 服务，覆盖认证、回调内 RPC、大整数、乱序响应、重复 ACK、断线原因、重连后的幂等处理和账号范围。Bot Hub 是独立模块，需要进入 `bot-hub/` 目录单独测试。
 
 当前源码可在仓库内直接构建。将来发布 SDK module 时使用 `ws/go/v0.2.0` 这种子目录 tag，使用者固定到实际发布版本；不要将尚未发布的 tag 宣称为可安装版本。提交 go.mod/go.sum/LICENSE，保留 `testdata/sdk-contract.json` 和测试；排除端点、凭据、日志、数据库和编译产物。使用 [MIT License](LICENSE)，依赖遵循各自许可证。

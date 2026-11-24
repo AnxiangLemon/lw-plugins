@@ -1,6 +1,6 @@
 # 群资料刷新事件
 
-[Python SDK](../ws/python/README.md) · [Go SDK](../ws/go/README.md) · [微信群管家](../ws/go/group-manager/README.md)
+[Python SDK](../ws/python/README.md) · [Go SDK](../ws/go/README.md) · [LW Bot Hub](../ws/go/bot-hub/README.md)
 
 新版 Rust 宿主在 hello.ok.events 中声明两个 WS 实时事件，协议仍为 v2。插件必须检查宿主支持的事件名，再订阅。账号范围和平台订阅过滤继续生效；消息前缀、聊天过滤插件不会拦住没有正文的刷新提示。
 
@@ -58,7 +58,7 @@ Hint 只表达“可能需要核对”，真正的成员净变化由插件持有
 
 Go 与 Python 统一提供事件常量、类型化提示对象、宿主能力检查和重连初始化入口。宿主与 SDK 不自动建立群名单数据库，也不自动发送欢迎消息。
 
-群管家数据面板将完整成员详情中的 `inviterUserName` 单独保存为邀请来源。扫码入群有该字段时同样计入，没有字段时标为未知；当前不从系统提示文案猜测邀请人。首次加载只用于当前成员来源统计，不计入“期间新增”。群名与备注通过 `friend.init_contact` 双游标分页和 `friend.batch_get_contact_brief_info` 补齐，列表刷新失败保留旧资料。详见 [群管家说明](../ws/go/group-manager/README.md)。
+Bot Hub 微信群管模块将完整成员详情中的 `inviterUserName` 单独保存为邀请来源；不从系统提示文案猜测邀请人。群名、群备注与群主通过 `friend.init_contact` 与 `friend.get_contact_detail` 补齐。详见 [LW Bot Hub](../ws/go/bot-hub/README.md)。
 
 ## Go / Python 能力对照
 
@@ -123,6 +123,6 @@ async def disconnected(error):
 plugin.run()
 ```
 
-入退群日志默认开启、微信消息提示独立开关、邀请人统计等产品设置继续由[微信群管家](../ws/go/group-manager/README.md)维护，不进入语言 SDK。这样两端共用协议约定，不会因复制群管家的数据库和页面逻辑而出现两套实现。
+入退群日志、微信消息提示独立开关、黑名单与群管理等产品能力由 [LW Bot Hub](../ws/go/bot-hub/README.md) 等业务插件维护，不进入语言 SDK。这样两端共用协议约定，不会因复制业务存储和页面逻辑而出现两套实现。
 
 完整事件目录、通用平台消息和媒体接口对照见 [SDK 协议对照](sdk-parity.md)。

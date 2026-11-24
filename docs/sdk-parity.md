@@ -58,7 +58,7 @@
 | `account.online` | `AccountOnline` | `ACCOUNT_ONLINE` | 账号状态实时通知 |
 | `account.offline` | `AccountOffline` | `ACCOUNT_OFFLINE` | 账号状态实时通知 |
 
-Go 的旧 `MessageReceived` / `MessageSent` 为兼容已有群管家，继续指向微信专用事件。新代码推荐用表中的明确名称，不要按常量名字猜平台。`AllEvents()` / `ALL_EVENTS` 是目录，不建议一键全订阅：同一微信消息可能同时产生通用和微信专用事件。
+Go 的旧 `MessageReceived` / `MessageSent` 为保持向后兼容，继续指向微信专用事件。新代码推荐用表中的明确名称，不要按常量名字猜平台。`AllEvents()` / `ALL_EVENTS` 是目录，不建议一键全订阅：同一微信消息可能同时产生通用和微信专用事件。
 
 事件均保留原始帧；Go 为 `Event.Raw`，Python 为 `event.raw`。`trace_id`、`call_id`、`result`、`delivery`、`status` 等字段可直接读取。群提示的可选版本字段用 Go 指针 / Python `None` 表示缺失，绝不默认成 0。64 位 ID 不转浮点：Go 动态对象用 `Decode`，Python 原生整数保留精度。
 
@@ -142,7 +142,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
  go test -race ./...
  go vet ./...
 
-# ws/go/group-manager 目录：确认旧插件不因 SDK 更新回归
+# ws/go/bot-hub 目录：确认 Bot Hub 业务插件不因 SDK 更新回归
  go test ./...
 ```
 

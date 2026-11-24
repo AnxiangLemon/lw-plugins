@@ -8,7 +8,7 @@ import (
 
 func TestEndpointExecutableDirectoryAndWorkingDirectory(t *testing.T) {
 	root := t.TempDir()
-	program := filepath.Join(root, "portable", "group-manager.exe")
+	program := filepath.Join(root, "portable", "bot-hub.exe")
 	working := filepath.Join(root, "another", "work")
 	paths := endpointCandidates(program, working)
 	if paths[0] != filepath.Join(root, "portable", "plugin-endpoint.json") || paths[2] != filepath.Join(working, "plugin-endpoint.json") {
