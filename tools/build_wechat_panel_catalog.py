@@ -57,6 +57,8 @@ def sample(schema, name=''):
         return schema['example']
     if 'default' in schema:
         return schema['default']
+    if schema.get('enum'):
+        return schema['enum'][0]
     ty = schema.get('type')
     if isinstance(ty, list): ty = next(t for t in ty if t != 'null')
     if ty == 'object': return {k: sample(v, k) for k, v in schema.get('properties', {}).items()}
@@ -76,9 +78,20 @@ def sample(schema, name=''):
 
 def build(allowed_methods, spec, source):
     def resolve(schema, seen=()):
-        if len(schema.get('allOf', [])) == 1:
-            return {**resolve(schema['allOf'][0], seen),
-                    **resolve({k:v for k,v in schema.items() if k != 'allOf'}, seen)}
+        if schema.get('allOf'):
+            # Swag composes the common envelope and its concrete data model.
+            # Merge their object fields so the exported catalog stands alone.
+            merged = {}
+            parts = [*schema['allOf'], {k:v for k,v in schema.items() if k != 'allOf'}]
+            for part in parts:
+                for key, value in resolve(part, seen).items():
+                    if key == 'properties':
+                        merged.setdefault(key, {}).update(value)
+                    elif key == 'required':
+                        merged[key] = list(dict.fromkeys([*merged.get(key, []), *value]))
+                    else:
+                        merged[key] = value
+            return merged
         if '$ref' in schema:
             ref = schema['$ref'].rsplit('/', 1)[-1]
             if ref in seen: return {'type': 'object', 'description': '递归对象；参见服务文档。'}

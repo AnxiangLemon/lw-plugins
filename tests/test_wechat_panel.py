@@ -65,6 +65,23 @@ class PanelFlow(unittest.IsolatedAsyncioTestCase):
         status,_=await self.post('group.quit',{'chatRoomId':'g'},account='')
         self.assertEqual(status,400)
 
+    async def test_emoji_token_and_base64_cursor_are_business_data(self):
+        for name, params in [
+            ('emoji.get_pack_download', {'productId':'pack-id','token':'AP8=','automatic':False}),
+            ('emoji.sync', {'index':0,'reqBuff':'AP8=','syncParam':'AA==','panelType':0}),
+        ]:
+            status,value=await self.post(name,params)
+            self.assertEqual(status,200,value)
+            self.assertEqual(json.loads(value['result_json'])['data']['received_params'],params)
+        for name,params in [
+            ('emoji.sync',{'reqBuff':[0,255]}),
+            ('emoji.operate',{'action':'unknown','md5List':[]}),
+            ('emoji.search',{}),
+            ('emoji.get_pack_download',{'productId':'pack','accessToken':'override'}),
+        ]:
+            status,_=await self.post(name,params)
+            self.assertEqual(status,400,(name,params))
+
     async def test_messages_are_forwarded_live_without_database_or_replay(self):
         async with self.http.ws_connect(self.base+'/api/events') as viewer:
             event={'v':2,'type':'event','event':'wechat.message.received','cursor':201,

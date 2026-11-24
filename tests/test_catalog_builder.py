@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-from build_wechat_panel_catalog import build
+from build_wechat_panel_catalog import build, sample
 
 
 def swagger():
@@ -41,6 +41,35 @@ METHODS = [{"name": "group.set_name", "path": "/api/Group/SetName"}]
 
 
 class CatalogBuilderTests(unittest.TestCase):
+    def test_examples_use_valid_enum_values_and_preserve_explicit_defaults(self):
+        self.assertEqual(sample({'type':'string','enum':['add','delete','top']}), 'add')
+        self.assertEqual(sample({'type':'integer','enum':[1,2]}), 1)
+        self.assertIs(sample({'type':'boolean','enum':[True,False],'default':False}), False)
+        self.assertEqual(sample({'type':'string','enum':['add','delete'],'example':'delete'}), 'delete')
+
+    def test_response_schema_preserves_base64_and_dynamic_business_objects(self):
+        spec = swagger()
+        spec['paths']['/api/Group/SetName']['post']['responses']['200']['schema'] = {
+            'allOf':[
+                {'$ref':'#/definitions/Envelope'},
+                {'type':'object','properties':{'data':{'$ref':'#/definitions/Page'}}},
+            ],
+        }
+        spec['definitions']['Envelope'] = {'type':'object','required':['code'],'properties':{
+            'code':{'type':'integer'}, 'message':{'type':'string'}, 'data':{},
+        }}
+        spec['definitions']['Page'] = {'type':'object','properties':{
+            'reqBuff':{'type':'string','format':'byte'},
+            'response':{'type':'object'},
+        }}
+        method = build(METHODS, spec, 'swagger.json')['methods'][0]
+        data = method['response_schema']['properties']['data']
+        self.assertEqual(method['response_schema']['required'], ['code'])
+        self.assertEqual(method['response_schema']['properties']['code'], {'type':'integer'})
+        self.assertEqual(data['properties']['reqBuff'], {'type':'string','format':'byte'})
+        self.assertEqual(data['properties']['response'], {'type':'object'})
+        self.assertNotIn('$ref', json.dumps(method['response_schema']))
+
     def test_public_methods_limit_scope_and_remove_host_credentials(self):
         result = build(METHODS, swagger(), "swagger.json")
         self.assertEqual(result["counts"], {"business": 1, "total": 1})

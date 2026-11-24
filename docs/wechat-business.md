@@ -6,13 +6,13 @@
 
 ## 接口与参数
 
-本仓库的[接口目录](../ws/python/wechat_panel/catalog.json)包含 164 个业务方法，可在面板中查看参数、嵌套 schema 与调用代码。实际可用方法以当前宿主返回的能力列表为准。
+本仓库的[接口目录](../ws/python/wechat_panel/catalog.json)包含 174 个业务方法，可在面板中查看参数、嵌套 schema 与调用代码。实际可用方法以当前宿主返回的能力列表为准。
 
 - 参数使用服务原字段名，例如 `toWxid`、`chatRoomId`、`base64`、`voiceTime`，不转换旧参数别名。
 - 登录、授权和内部消息同步由宿主管理。插件订阅 `wechat.message.received` 接收消息，无需调用 `/Msg/Sync`。
 - 媒体输入需符合服务要求的编码和格式。示例中的 `AA==` 仅用于模拟，宿主不负责自动转码。
 
-当前目录对齐 lwsapi v1.0.10，包括 CDN 文件/视频/朋友圈/收藏 HTML、公众号、小程序查询、OpenIM 与 TenPay。Finder 使用 `finder.operations/schema/build/decode/invoke`；Invoke 参数为 `{"operation":"FinderInit","request":{}}`，操作参数先查 Schema，PB 64 位整数用字符串。服务端公开工具入口可不登录；插件调用仍通过宿主账号范围的账本。
+当前目录对齐 lwsapi v1.0.13，包括 Emoji 自定义表情与表情商店、CDN 文件/视频/朋友圈/收藏 HTML、公众号、小程序查询、OpenIM 与 TenPay。Finder 使用 `finder.operations/schema/build/decode/invoke`；Invoke 参数为 `{"operation":"FinderInit","request":{}}`，操作参数先查 Schema，PB 64 位整数用字符串。服务端公开工具入口可不登录；插件调用仍通过宿主账号范围的账本。
 
 公众号关注传 `bizUserName`，视频不再传 `playLength`，语音 `voiceTime` 单位毫秒。`enabled:false`、备注 `""` 和标签 `[]` 表示明确关闭或清空，不要省略。普通群和企业互通群分别使用 `@chatroom`、`@im.chatroom`，企业联系人 `@openim` 不是群 ID。
 
@@ -141,3 +141,5 @@ for row in page["items"]:
 ## 验证示例
 
 SDK、面板和目录生成器均可使用本仓库的本地模拟测试验证，无需实际账号。命令和覆盖范围见[开发与调试](development.md#运行测试)。
+
+Emoji 的同步游标、版本字段及 Base64 业务数据按服务返回值原样传入；`emoji.get_pack_download.token` 是表情商店业务字段。上传与收藏操作不会自动发送表情消息。VoIP 继续由专用语音插件通过 `wechat.voip.control` 接入；CDN DNS Relay 的 Prepare/Complete 由宿主管理，通用业务目录不暴露这些内部流程。

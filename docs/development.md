@@ -46,7 +46,7 @@ python -m unittest discover -s ws/python/tests -v
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-SDK 测试覆盖跨事件循环启动、断线原因和幂等键、业务调用、事件确认、错误日志和多平台 WS 行为。Go / Python 共用 `ws/go/testdata/sdk-contract.json`，新增协议请同时更新两端实现和[协议对照](sdk-parity.md)。面板测试使用本地模拟宿主，覆盖全部 164 个接口入口、账号选择、参数校验、实时消息、JSON 精度、异步回执、业务失败和跨来源请求；目录生成器测试验证公开方法范围与字段转换。这些测试不需要实际账号或运行中的宿主。
+SDK 测试覆盖跨事件循环启动、断线原因和幂等键、业务调用、事件确认、错误日志和多平台 WS 行为。Go / Python 共用 `ws/go/testdata/sdk-contract.json`，新增协议请同时更新两端实现和[协议对照](sdk-parity.md)。面板测试使用本地模拟宿主，覆盖全部 174 个接口入口、账号选择、参数校验、实时消息、JSON 精度、异步回执、业务失败和跨来源请求；目录生成器测试验证公开方法范围与字段转换。这些测试不需要实际账号或运行中的宿主。
 
 ## Lua 辅助库回归
 
@@ -94,7 +94,7 @@ python tools/build_wechat_panel_catalog.py --docs-file 'C:\path\to\swagger.json'
 python tools/build_wechat_panel_catalog.py --methods-file 'C:\path\to\wechat-methods.json' --docs-file 'C:\path\to\swagger.json'
 ```
 
-当前内置目录对齐服务端 v1.0.10，包含 164 个业务方法。Finder 动态路径从 `operation` 字段取操作名，自由业务对象保留开放字段，带说明的 `allOf/$ref` 嵌套结构会展开后校验。
+当前内置目录对齐服务端 v1.0.13，包含 174 个业务方法。Finder 动态路径从 `operation` 字段取操作名，自由业务对象保留开放字段，带说明的 `allOf/$ref` 嵌套结构会展开后校验。
 
 ## 贡献约定
 

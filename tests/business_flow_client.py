@@ -53,7 +53,7 @@ async def main():
         async with ClientSession() as http:
             async with http.get(base+'/api/state?account_id=wxid_test') as response:
                 state=await response.json()
-            assert len(state['supported'])==164,state
+            assert set(state['supported']) == set(panel.METHODS), state
             assert 'msg.sync_messages' not in state['supported'],state
             for method in panel.CATALOG['methods']:
                 body={'method':method['name'],'arguments':json.dumps(method['example']),'account_id':'wxid_test','idempotency_key':uuid4().hex,'mode':'call'}
@@ -81,7 +81,7 @@ async def main():
         assert done.status=='succeeded' and (await wx.calls.find('python-async')).call_id==accepted.call_id
         assert (await wx.call('login.logout',{})).status=='rejected'
         await reconnect_flow()
-        print('PASS: reconnect replay + 164 panel operations + echo/assistant/business examples + asynchronous receipt',flush=True)
+        print(f'PASS: reconnect replay + {len(panel.METHODS)} panel operations + echo/assistant/business examples + asynchronous receipt',flush=True)
     finally:
         await runner.cleanup();await plugin.close();await task
 
