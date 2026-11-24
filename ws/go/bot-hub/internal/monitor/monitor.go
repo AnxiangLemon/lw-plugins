@@ -1058,17 +1058,33 @@ func cleanRawCaption(msg *lwplugin.Message) string {
 	if msg == nil {
 		return ""
 	}
-	t := strings.TrimSpace(msg.Text)
-	if t == "" || strings.HasPrefix(t, "<msg>") || strings.HasPrefix(t, "<?xml") {
-		return ""
-	}
+	// 优先从显式 text 段提取原始正文：
+	// Telegram 消息的 msg.Text 由宿主拼接所有段生成，会把附带的 At 段（如 "@snakehyc"）
+	// 再次拼在末尾变成 "@@snakehyc"；直接读取 text 段即可得到干净原文。
+	var textParts []string
 	hasTextSeg := false
 	for _, seg := range msg.Segments {
 		st := strings.ToLower(strings.TrimSpace(seg.Type))
-		if st == "text" || st == "at" {
+		if st == "text" {
 			hasTextSeg = true
-			break
+			if m, ok := seg.Data.(map[string]any); ok {
+				if s := strings.TrimSpace(stringFromMap(m, "text")); s != "" {
+					textParts = append(textParts, s)
+				}
+			}
 		}
+	}
+	if len(textParts) > 0 {
+		joined := strings.TrimSpace(strings.Join(textParts, "\n"))
+		if strings.HasPrefix(joined, "<msg>") || strings.HasPrefix(joined, "<?xml") {
+			return ""
+		}
+		return joined
+	}
+
+	t := strings.TrimSpace(msg.Text)
+	if t == "" || strings.HasPrefix(t, "<msg>") || strings.HasPrefix(t, "<?xml") {
+		return ""
 	}
 	if !hasTextSeg && isAutoMediaPlaceholder(t) {
 		return ""

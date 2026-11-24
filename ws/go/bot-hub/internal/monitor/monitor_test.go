@@ -265,3 +265,21 @@ func TestShouldExcludeMessage(t *testing.T) {
 		t.Fatal("normal message should not be excluded")
 	}
 }
+
+func TestTelegramMentionDoesNotDuplicateTrailingAt(t *testing.T) {
+	// 宿主拼接 msg.Text 时会把 Telegram 附带的 At 段再拼一次（形成末尾 @@snakehyc）
+	tgMentionMsg := &lwplugin.Message{
+		Platform: "telegram",
+		ChatType: "group",
+		Text:     "@snakehyc 服务器宕机了 @@snakehyc",
+		Segments: []lwplugin.Segment{
+			{Type: "text", Data: map[string]any{"text": "@snakehyc 服务器宕机了"}},
+			{Type: "at", Data: map[string]any{"target_id": "@snakehyc"}},
+		},
+	}
+	types := detectMessageTypes(tgMentionMsg, nil)
+	got := buildContentSummary(tgMentionMsg, types, nil)
+	if got != "@snakehyc 服务器宕机了" {
+		t.Fatalf("expected clean original text without trailing @@, got %q", got)
+	}
+}
