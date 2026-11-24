@@ -13,6 +13,7 @@ dist/
 .env.*
 !.env.example
 config/
+!/ws/go/bot-hub/internal/config/
 logs/
 data/
 migration-backups/
@@ -27,6 +28,8 @@ secret.key
 /ws/go/echo.exe
 /ws/go/group-manager/group-manager
 /ws/go/group-manager/group-manager.exe
+/ws/go/bot-hub/bot-hub
+/ws/go/bot-hub/bot-hub.exe
 /ws/go/examples/echo/echo
 /ws/go/examples/echo/echo.exe
 /ws/rust/target/

@@ -21,8 +21,10 @@ cargo run --locked --manifest-path ws/rust/Cargo.toml --example listen -- 'C:\pa
 
 ## 会话接口
 
+- `events` 模块导出宿主 WS 协议 v2 的公开事件名常量（含通用、微信及 6 种 Telegram 交互与群管事件）。
 - `Session::connect` 发送 Bearer 认证、`hello` 和 `subscribe`，确认宿主接受请求的事件。通过 `Session::hello` 读取已声明的宿主能力。
 - `Session::send_call` 返回 `req_id`，通过 `Session::recv` 读取事件和 `api.result`。调用方按 `req_id` 关联响应。原始 JSON 保留协议字段与 64 位整数。
+- `Session::send_telegram_call` 与 `Session::send_telegram_download_file` 封装 `telegram.call` 和 `telegram.download_file` RPC 调用。
 - `Session::send_frame` 可发送协议中的其他 JSON 帧。读取时自动回应 WebSocket Ping。
 - 应用负责断线重连和业务回执处理。连接中断或等待超时后，应用应根据原回执及幂等键决定怎样恢复。
 

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LW Bot Hub — 多平台群管与监控中心</title>
+  <link rel="stylesheet" href="style.css?v=20261124f" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- 左侧导航 -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+            <polyline points="2 17 12 22 22 17"/>
+            <polyline points="2 12 12 17 22 12"/>
+          </svg>
+        </div>
+        <div class="brand-meta">
+          <div class="brand-title">LW Bot Hub</div>
+          <div class="brand-sub">多平台群管与监控中心</div>
+        </div>
+      </div>
+
+      <div class="conn-pill" id="connCard">
+        <span class="status-dot offline" id="connDot" aria-hidden="true"></span>
+        <div class="conn-meta">
+          <div class="conn-title" id="connText">等待连接宿主</div>
+          <div class="conn-sub" id="connSub">请在 LW Tools 允许接入</div>
+        </div>
+      </div>
+
+      <div class="nav-group-label">工作台</div>
+      <nav class="nav" aria-label="工作台导航">
+        <button type="button" class="nav-item active" data-tab="overview">
+          <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          <span class="nav-label">数据概览</span>
+        </button>
+        <button type="button" class="nav-item" data-tab="wechat">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          <span class="nav-label">微信群管</span>
+          <span class="nav-count is-zero" id="badgeWx">0</span>
+        </button>
+        <button type="button" class="nav-item" data-tab="tg">
+          <svg class="ico" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <span class="nav-label">Telegram 群管</span>
+          <span class="nav-count is-zero" id="badgeTg">0</span>
+        </button>
+      </nav>
+
+      <div class="nav-group-label">监控与自动化</div>
+      <nav class="nav" aria-label="监控与自动化导航">
+        <button type="button" class="nav-item" data-tab="monitor">
+          <svg class="ico" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span class="nav-label">监控与转发</span>
+          <span class="nav-count is-zero" id="badgeMonitor">0</span>
+        </button>
+        <button type="button" class="nav-item" data-tab="groups">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span class="nav-label">人员分组 (@)</span>
+          <span class="nav-count is-zero" id="badgeGroups">0</span>
+        </button>
+        <button type="button" class="nav-item" data-tab="blacklist">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>
+          <span class="nav-label">黑名单管理</span>
+          <span class="nav-count is-zero" id="badgeBlacklist">0</span>
+        </button>
+        <button type="button" class="nav-item" data-tab="logs">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span class="nav-label">审计日志</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="version-pill">Bot Hub v0.2.0</span>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-copy">
+          <h1 class="page-title" id="pageTitle">数据概览</h1>
+          <p class="page-desc" id="pageDesc">统一管理多平台账号、群聊风控、成员进退群动态与消息转发</p>
+        </div>
+      </header>
+
+      <!-- Tab 1: 概览 -->
+      <section class="tab-panel active" id="tab-overview">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">入站消息总量</span>
+              <span class="kpi-icon indigo" aria-hidden="true">
+                <svg class="ico-sm" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </span>
+            </div>
+            <div class="kpi-num" id="statMessages">0</div>
+            <div class="kpi-sub" id="statUptime">运行时长 0 秒</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">告警转发成功</span>
+              <span class="kpi-icon emerald" aria-hidden="true">
+                <svg class="ico-sm" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </span>
+            </div>
+            <div class="kpi-num" id="statAlerts">0</div>
+            <div class="kpi-sub">含同平台与跨平台转发</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">冷却防刷屏拦截</span>
+              <span class="kpi-icon amber" aria-hidden="true">
+                <svg class="ico-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </span>
+            </div>
+            <div class="kpi-num" id="statSuppressed">0</div>
+            <div class="kpi-sub">冷却窗口内重复触发自动静默</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">群管执行与变动</span>
+              <span class="kpi-icon sky" aria-hidden="true">
+                <svg class="ico-sm" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+              </span>
+            </div>
+            <div class="kpi-num" id="statAdmin">0</div>
+            <div class="kpi-sub">各平台群管与成员变动</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card card-flush-body">
+            <div class="card-head">
+              <div>
+                <h3>宿主账号目录</h3>
+                <p>自动同步各平台已登录账号的真实头像与昵称，点击右侧可复制账号 ID</p>
+              </div>
+              <span class="soft-badge" id="accountCountBadge">0 个账号</span>
+            </div>
+            <div id="accountsList" class="account-list"></div>
+          </div>
+
+          <div class="card card-flush-body">
+            <div class="card-head">
+              <div>
+                <h3>活跃冷却窗口</h3>
+                <p>冷却期内重复命中的转发规则会自动静默，避免刷屏</p>
+              </div>
+              <div class="card-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="btnClearCooldowns">清空冷却</button>
+              </div>
+            </div>
+            <div id="cooldownsList" class="stack-list"></div>
+          </div>
+        </div>
+
+        <div class="card card-flush-body">
+          <div class="card-head">
+            <div>
+              <h3>最近系统与群管动态</h3>
+              <p>实时聚合各平台群管操作、成员变动、监控转发与冷却拦截</p>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn btn-ghost btn-sm" id="btnGotoLogs">查看全部</button>
+              <button type="button" class="btn btn-danger btn-sm" id="btnClearOverviewLogs">清空日志</button>
+            </div>
+          </div>
+          <div id="overviewLogs" class="log-list"></div>
+        </div>
+      </section>
+
+      <!-- Tab 2: 微信群管 -->
+      <section class="tab-panel" id="tab-wechat">
+        <div id="wxListView">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <div class="cselect cselect-account" id="wxAccountSelect" data-placeholder="选择在线微信账号"></div>
+              <button type="button" class="btn btn-outline" id="btnWxDiscover">
+                <svg class="ico-sm ico-spin" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                <span>同步通讯录群列表</span>
+              </button>
+            </div>
+            <button type="button" class="btn btn-primary" id="btnAddWxRoom">
+              <svg class="ico-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>添加微信监控群</span>
+            </button>
+          </div>
+
+          <div id="wxRoomsGrid" class="cards-grid"></div>
+
+          <div class="card card-flush-body section-gap">
+            <div class="card-head">
+              <div>
+                <h3>微信入群 / 退群历史动态</h3>
+                <p>已持久化保存到本地磁盘，重启不丢失；保留微信协议返回的真实邀请人</p>
+              </div>
+              <div class="card-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="btnClearWxChanges">清空记录</button>
+              </div>
+            </div>
+            <div id="wxChangesList" class="log-list"></div>
+          </div>
+        </div>
+
+        <!-- 全宽群成员与管理工作台（点击某群「成员与群管理」切换进入） -->
+        <div id="wxDetailView" style="display:none"></div>
+      </section>
+
+      <!-- Tab 3: Telegram 群管 -->
+      <section class="tab-panel" id="tab-tg">
+        <div class="toolbar">
+          <div class="info-note">
+            <b>前提：</b>请将机器人设为群管理员（开启删除消息、限制成员与邀请权限）。群管理员在群内发送 <code>/panel</code> 可呼出开关面板，<b>回复某人消息</b>发 <code>/unmute</code> 或点击禁言通知下的按钮均可一键解禁。
+          </div>
+          <div class="toolbar-right">
+            <button type="button" class="btn btn-outline" id="btnTgManualUnmute">
+              <span>手动按 ID 解禁</span>
+            </button>
+            <button type="button" class="btn btn-primary" id="btnAddTgChat">
+              <svg class="ico-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>添加 TG 群策略</span>
+            </button>
+          </div>
+        </div>
+        <div id="tgChatsGrid" class="cards-grid"></div>
+
+        <div class="card card-flush-body section-gap">
+          <div class="card-head">
+            <div>
+              <h3>当前受限（禁言）与警告成员</h3>
+              <p>警告次数在达上限、解禁或重新入群后均不会自动清零，仅支持管理员点击右侧「清零警告」手动清除</p>
+            </div>
+            <span class="soft-badge" id="tgSanctionCountBadge">0 条记录</span>
+          </div>
+          <div id="tgSanctionsList" class="log-list"></div>
+        </div>
+      </section>
+
+      <!-- Tab 4: 监控与转发 -->
+      <section class="tab-panel" id="tab-monitor">
+        <div id="ruleListView">
+          <div class="toolbar">
+            <div class="info-note">
+              支持 <b>同平台直转</b> 与 <b>跨平台自动中转</b>（含图片、视频、文件与语音）；可按 <code>@</code> / 人员分组 / 关键词精准触发，或开启全量消息同步。
+            </div>
+            <div class="toolbar-right">
+              <button type="button" class="btn btn-outline" id="btnOpenTestModal">
+                <svg class="ico-sm" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <span>测试发送</span>
+              </button>
+              <button type="button" class="btn btn-primary" id="btnAddRule">
+                <svg class="ico-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>新建转发规则</span>
+              </button>
+            </div>
+          </div>
+          <div id="rulesGrid" class="cards-grid"></div>
+        </div>
+
+        <!-- 全宽消息转发规则配置面板（点击「新建转发规则」或「编辑」进入） -->
+        <div id="ruleEditorView" style="display:none"></div>
+      </section>
+
+      <!-- Tab 5: 人员分组 (@) -->
+      <section class="tab-panel" id="tab-groups">
+        <div class="toolbar">
+          <div class="info-note">
+            把常用群成员或值班人员打包成一个分组，供多条「监控与转发」规则一键复用。
+          </div>
+          <button type="button" class="btn btn-primary" id="btnAddGroup">
+            <svg class="ico-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>新建人员分组</span>
+          </button>
+        </div>
+
+        <div class="guide-strip">
+          <div class="guide-item">
+            <span class="guide-step">1</span>
+            <div>
+              <div class="guide-title">这是什么？</div>
+              <div class="guide-desc">纯粹的「成员名单」：把各平台的成员账号（ID、用户名或昵称）归入同一分组，换班时只需改一处。</div>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-step">2</span>
+            <div>
+              <div class="guide-title">单独建组会发消息吗？</div>
+              <div class="guide-desc"><b>不会。</b>分组本身只存成员名单；关键词和 <code>@所有人</code> 统一在「监控与转发」规则里配置，引用本分组后才会生效。</div>
+            </div>
+          </div>
+          <div class="guide-item">
+            <span class="guide-step">3</span>
+            <div>
+              <div class="guide-title">触发后会发生什么？</div>
+              <div class="guide-desc">群里有人 <code>@</code> 组内任意一位成员时，关联的转发规则会自动将消息转发到指定目标，且同组共享冷却防刷屏。</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="groupsGrid" class="cards-grid"></div>
+      </section>
+
+      <!-- Tab 6: 黑名单管理（全平台共用） -->
+      <section class="tab-panel" id="tab-blacklist">
+        <div class="toolbar">
+          <div class="info-note">
+            <b>一处拉黑，处处受阻：</b>同平台下<b>全群通用、全账号通用</b>。开启群策略中的「黑名单系统」后，命中成员将被静默拒绝加群或静默移出，不在群内发任何提示，仅记录审计日志。
+          </div>
+          <button type="button" class="btn btn-primary" id="btnAddGlobalBlacklist">
+            <svg class="ico-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>手动拉黑</span>
+          </button>
+        </div>
+
+        <div class="card card-flush-body">
+          <div class="card-head">
+            <div>
+              <h3>全平台黑名单库</h3>
+              <p>点击「移出黑名单」后立即放行；Telegram 将自动解除相关群封禁，微信将停止自动移出</p>
+            </div>
+            <span class="soft-badge" id="globalBlacklistBadge">0 人</span>
+          </div>
+          <div class="member-search-bar">
+            <input type="text" class="member-search-input" id="blSearchInput" placeholder="搜索用户 ID、昵称、拉黑原因或来源群..." />
+            <div class="segmented" id="blPlatformFilters"></div>
+          </div>
+          <div id="globalBlacklistList" class="log-list"></div>
+        </div>
+      </section>
+
+      <!-- Tab 7: 审计日志 -->
+      <section class="tab-panel" id="tab-logs">
+        <div class="toolbar">
+          <div class="segmented" id="logFilters">
+            <button type="button" class="seg-btn active" data-cat="all">全部</button>
+            <button type="button" class="seg-btn" data-cat="wx_admin">微信群管</button>
+            <button type="button" class="seg-btn" data-cat="tg_admin">TG 群管</button>
+            <button type="button" class="seg-btn" data-cat="monitor">监控转发</button>
+            <button type="button" class="seg-btn" data-cat="cooldown">冷却拦截</button>
+            <button type="button" class="seg-btn" data-cat="system">系统</button>
+          </div>
+          <div class="toolbar-right">
+            <button type="button" class="btn btn-outline" id="btnReloadLogs">
+              <svg class="ico-sm ico-spin" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>刷新</span>
+            </button>
+            <button type="button" class="btn btn-danger-outline" id="btnClearLogs">
+              <svg class="ico-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              <span id="btnClearLogsText">清空全部日志</span>
+            </button>
+          </div>
+        </div>
+        <div class="card card-flush-body">
+          <div id="fullLogs" class="log-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 定制模态弹窗 -->
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" id="modalBox">
+      <div class="modal-head">
+        <h3 id="modalTitle">编辑</h3>
+        <button type="button" class="icon-close" id="modalClose" aria-label="关闭">
+          <svg class="ico-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-foot" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <!-- 定制确认弹窗（取代浏览器原生 confirm） -->
+  <div class="modal-backdrop" id="confirmBackdrop" role="alertdialog" aria-modal="true" aria-hidden="true">
+    <div class="modal modal-sm">
+      <div class="modal-head">
+        <h3 id="confirmTitle">确认操作</h3>
+      </div>
+      <div class="modal-body">
+        <p id="confirmDesc" class="confirm-desc"></p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-outline" id="confirmCancel">取消</button>
+        <button type="button" class="btn btn-danger-solid" id="confirmOk">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toastContainer" aria-live="polite"></div>
+  <script src="app.js?v=20261124f"></script>
+</body>
+</html>

@@ -18,6 +18,7 @@ from websockets.exceptions import ConnectionClosed, ConnectionClosedOK
 
 from .endpoint import Endpoint, load_endpoint
 from .wechat import Wechat, source_event, new_key
+from .telegram import Telegram
 from .calls import Calls
 from .events import ALL_EVENTS, MESSAGE_RECEIVED, GROUP_REFRESH_HINT, SYNC_HINT, MESSAGE_FILTER, Event, HostInfo, text_segment
 
@@ -252,6 +253,9 @@ class Plugin:
 
     def wechat(self, account_id):
         return Wechat(self, account_id)
+
+    def telegram(self, account_id):
+        return Telegram(self, account_id)
 
     def calls(self, account_id, *, platform=None):
         return Calls(self, account_id, self._event_platform.get() if platform is None else platform)

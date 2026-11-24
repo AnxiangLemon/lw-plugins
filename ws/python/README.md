@@ -170,6 +170,27 @@ print(result.status, result.call_id)
 
 完整字段、调用状态与保留期见[微信业务指南](../../docs/wechat-business.md)。登录、业务授权和内部消息同步由宿主管理。
 
+## Telegram Bot API 与事件
+
+使用 `plugin.telegram(account_id)` 可复用现有 WS 连接直接调用任意 Telegram Bot API（通过宿主 `telegram.call` 与 `telegram.download_file` 转发，支持 camelCase 与 snake_case）：
+
+```python
+from lwplugin import TELEGRAM_CALLBACK_QUERY, telegram_upload_file
+
+@plugin.on(TELEGRAM_CALLBACK_QUERY)
+async def on_callback(event, ctx):
+    tg = plugin.telegram(event.account_id)
+    cq = event.data["callback_query"]
+    await tg.answer_callback_query(cq["id"], text="已收到")
+```
+
+| API / 事件常量 | 用途 |
+| --- | --- |
+| `tg.call(method, params)` | 同步转发任意 Bot API 方法；媒体字段传入 `telegram_upload_bytes` / `telegram_upload_file` 时自动走 multipart 上传 |
+| `tg.download_file(file_id)` / `download_bytes(file_id)` | 按 `file_id` 下载远程 Telegram 文件（Base64 / 原始字节） |
+| `tg.send_message/send_photo/send_photo_file/send_document/send_voice` | 常用发送快捷方法（另含 `answer_callback_query`、`edit_message_text`、`delete_message`、`set_my_commands`、`restrict_chat_member`、`ban_chat_member`、`approve_chat_join_request`、`decline_chat_join_request`） |
+| `TELEGRAM_CALLBACK_QUERY` / `TELEGRAM_EDITED_MESSAGE` / `TELEGRAM_MY_CHAT_MEMBER` / `TELEGRAM_CHAT_MEMBER` / `TELEGRAM_CHAT_JOIN_REQUEST` / `TELEGRAM_MESSAGE_REACTION` | 新增 6 种 Telegram 交互与群管实时事件（已纳入 `ALL_EVENTS`） |
+
 ## 通用调用账本
 
 Telegram 和其他声明通用执行器的平台，发送持久化入队后立即返回 `queued` / `running`，此时 `delivered=false`，不等待远端发送。使用 `call_id` 查询最终结果，仅 `succeeded` 表示服务确认成功。

@@ -1,6 +1,7 @@
 """lwplugin —— LW Tools WS 异步订阅插件的 Python SDK。"""
 
 from .wechat import Result, Wechat, new_key
+from .telegram import Telegram, telegram_upload_bytes, telegram_upload_file
 from .client import Context, Plugin, PluginError
 from .endpoint import Endpoint, EndpointNotFound, load_endpoint
 from .events import (
@@ -16,6 +17,12 @@ from .events import (
     GROUP_REFRESH_HINT,
     SYNC_HINT,
     WECHAT_MESSAGE_OBSERVED,
+    TELEGRAM_CALLBACK_QUERY,
+    TELEGRAM_EDITED_MESSAGE,
+    TELEGRAM_MY_CHAT_MEMBER,
+    TELEGRAM_CHAT_MEMBER,
+    TELEGRAM_CHAT_JOIN_REQUEST,
+    TELEGRAM_MESSAGE_REACTION,
     Event,
     GroupHint,
     SyncMetadata,
@@ -34,6 +41,7 @@ __version__ = "2.4.1"
 
 __all__ = [
     "Result", "Wechat", "new_key",
+    "Telegram", "telegram_upload_bytes", "telegram_upload_file",
     "ACCOUNT_OFFLINE",
     "ACCOUNT_ONLINE",
     "ALL_EVENTS",
@@ -46,6 +54,12 @@ __all__ = [
     "GROUP_REFRESH_HINT",
     "SYNC_HINT",
     "WECHAT_MESSAGE_OBSERVED",
+    "TELEGRAM_CALLBACK_QUERY",
+    "TELEGRAM_EDITED_MESSAGE",
+    "TELEGRAM_MY_CHAT_MEMBER",
+    "TELEGRAM_CHAT_MEMBER",
+    "TELEGRAM_CHAT_JOIN_REQUEST",
+    "TELEGRAM_MESSAGE_REACTION",
     "Context",
     "Endpoint",
     "EndpointNotFound",

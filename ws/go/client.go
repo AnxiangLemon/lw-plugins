@@ -55,20 +55,35 @@ type Client struct {
 	seenOrder []string
 }
 type frame struct {
-	Type     string          `json:"type"`
-	V        int             `json:"v"`
-	ReqID    string          `json:"req_id"`
-	ActionID string          `json:"action_id"`
-	Ref      string          `json:"ref"`
-	OK       bool            `json:"ok"`
-	Code     string          `json:"code"`
-	Message  string          `json:"message"`
-	Data     json.RawMessage `json:"data"`
-	Reason   string          `json:"reason"`
-	CallID   string          `json:"call_id"`
-	Status   string          `json:"status"`
-	Raw      json.RawMessage `json:"-"`
-	Cause    error           `json:"-"`
+	Type       string          `json:"type"`
+	V          int             `json:"v"`
+	ReqID      string          `json:"req_id"`
+	ActionID   string          `json:"action_id"`
+	Ref        string          `json:"ref"`
+	OK         bool            `json:"ok"`
+	Code       string          `json:"code"`
+	Message    string          `json:"-"`
+	MessageRaw json.RawMessage `json:"message"`
+	Data       json.RawMessage `json:"data"`
+	Reason     string          `json:"reason"`
+	CallID     string          `json:"call_id"`
+	Status     string          `json:"status"`
+	Raw        json.RawMessage `json:"-"`
+	Cause      error           `json:"-"`
+}
+
+func (f *frame) UnmarshalJSON(data []byte) error {
+	type alias frame
+	var a alias
+	if err := json.Unmarshal(data, &a); err != nil {
+		return err
+	}
+	*f = frame(a)
+	// error 帧里 message 是字符串，event 帧里 message 是消息对象；仅在字符串时提取到 Message。
+	if len(f.MessageRaw) > 0 && f.MessageRaw[0] == '"' {
+		_ = json.Unmarshal(f.MessageRaw, &f.Message)
+	}
+	return nil
 }
 
 // New 校验插件 ID，复制订阅配置；不会立即建立网络连接。

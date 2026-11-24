@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -17,17 +19,28 @@ const (
 	GenericMessageSent     = "message.sent"
 	MessageFilter          = "wechat.message.filter"
 	CallUpdated            = "wechat.call.updated"
-	AccountOnline          = "account.online"
-	AccountOffline         = "account.offline"
-	GroupRefreshHint       = "wechat.group.refresh_hint"
-	SyncHint               = "wechat.sync.hint"
+	AccountOnline           = "account.online"
+	AccountOffline          = "account.offline"
+	GroupRefreshHint        = "wechat.group.refresh_hint"
+	SyncHint                = "wechat.sync.hint"
+	TelegramCallbackQuery   = "telegram.callback_query"
+	TelegramEditedMessage   = "telegram.edited_message"
+	TelegramMyChatMember    = "telegram.my_chat_member"
+	TelegramChatMember      = "telegram.chat_member"
+	TelegramChatJoinRequest = "telegram.chat_join_request"
+	TelegramMessageReaction = "telegram.message_reaction"
 )
 
 // AllEvents 返回宿主 v2 的完整事件目录副本，不代表应订阅全部事件。
 // 微信专用与通用消息可能描述同一条消息，请按需要选择一个通道。
 func AllEvents() []string {
-	return []string{GroupRefreshHint, SyncHint, WechatMessageObserved, WechatMessageReceived, WechatMessageSent,
-		CallUpdated, MessageFilter, GenericMessageReceived, GenericMessageSent, AccountOnline, AccountOffline}
+	return []string{
+		GroupRefreshHint, SyncHint, WechatMessageObserved, WechatMessageReceived, WechatMessageSent,
+		CallUpdated, MessageFilter,
+		TelegramCallbackQuery, TelegramEditedMessage, TelegramMyChatMember,
+		TelegramChatMember, TelegramChatJoinRequest, TelegramMessageReaction,
+		GenericMessageReceived, GenericMessageSent, AccountOnline, AccountOffline,
+	}
 }
 
 // Decode 对动态 JSON 使用 json.Number，保留 64 位 ID 的十进制原值。
@@ -202,6 +215,7 @@ type Result struct {
 	Messages       json.RawMessage `json:"messages"`
 	Revision       int64           `json:"revision"`
 	OutboxID       *int64          `json:"outbox_id"`
+	OutboxIDText   string          `json:"-"`
 	Delivered      *bool           `json:"delivered"`
 	DetailsExpired bool            `json:"details_expired"`
 	// Original 保留整个回执，与服务端的 raw（原始业务响应）不是同一字段。
@@ -209,13 +223,34 @@ type Result struct {
 }
 
 // UnmarshalJSON 同时支持微信业务结果和通用 action.ack，不丢弃未知字段。
+// 兼容宿主 outbox_id 返回 int64、数字字符串或非数字字符串（如 UUID/前缀 ID）。
 func (r *Result) UnmarshalJSON(data []byte) error {
 	type plain Result
-	var value plain
+	type wire struct {
+		plain
+		OutboxID json.RawMessage `json:"outbox_id"`
+	}
+	var value wire
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
-	*r = Result(value)
+	*r = Result(value.plain)
+	if len(value.OutboxID) > 0 && string(value.OutboxID) != "null" {
+		var num int64
+		if err := json.Unmarshal(value.OutboxID, &num); err == nil {
+			r.OutboxID = &num
+			r.OutboxIDText = strconv.FormatInt(num, 10)
+		} else {
+			var str string
+			if err := json.Unmarshal(value.OutboxID, &str); err == nil {
+				str = strings.TrimSpace(str)
+				r.OutboxIDText = str
+				if parsed, pErr := strconv.ParseInt(str, 10, 64); pErr == nil {
+					r.OutboxID = &parsed
+				}
+			}
+		}
+	}
 	r.Original = append(json.RawMessage(nil), data...)
 	return nil
 }

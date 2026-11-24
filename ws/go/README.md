@@ -2,17 +2,17 @@
 
 轻量的 LW Tools WebSocket 协议 v2 客户端，package 名为 `lwplugin`。Go 1.23+，直接依赖只有 `gorilla/websocket`；数据库和页面均不属于 SDK。编译后的插件运行时不需要安装 Go 或 Python。
 
-[仓库首页](../../README.md) · [Go/Python 协议对照](../../docs/sdk-parity.md) · [微信群管家](group-manager/README.md) · [完整最小示例](examples/echo/main.go)
+[仓库首页](../../README.md) · [Go/Python 协议对照](../../docs/sdk-parity.md) · [微信群管家](group-manager/README.md) · [Bot Hub](bot-hub/README.md) · [完整最小示例](examples/echo/main.go)
 
 ## 本次对齐更新
 
-已补齐通用平台发送/回复、调用账本查询、显式微信过滤、媒体构造函数及单次会话。公开事件与 Python 对齐为 10 种；错误、回执和事件保留可追踪字段。旧 `MessageReceived` / `MessageSent` 的微信语义不变，现有群管家可以继续编译。
+已补齐通用平台发送/回复、Telegram Bot API 转发与文件下载、调用账本查询、显式微信过滤、媒体构造函数及单次会话。公开事件与 Python 对齐为 17 种（含 6 种 Telegram 交互与群管事件）；错误、回执和事件保留可追踪字段，`Result.OutboxIDText` 同时兼容数值型与字符串型 `outbox_id`。旧 `MessageReceived` / `MessageSent` 的微信语义不变，现有群管家可以继续编译。
 
 没有新增第三方依赖。源码尚未创建发布 tag；新 API、兼容变化与发布方式见[完整对照](../../docs/sdk-parity.md)。
 
 ## 目录与连接
 
-`endpoint.go` 负责端点发现，`client.go` 负责连接/订阅/并发 RPC，`types.go` 定义 DTO，`wechat.go` 封装微信调用和回执，`actions.go` 处理多平台发送与账本，`media.go` 构造媒体消息段。`group-manager/` 是独立 Go module，SQLite 不进入 SDK 模块。
+`endpoint.go` 负责端点发现，`client.go` 负责连接/订阅/并发 RPC，`types.go` 定义 DTO，`wechat.go` 封装微信调用和回执，`telegram.go` 封装 Telegram Bot API 调用、内联 Base64 文件上传与 `download_file`，`actions.go` 处理多平台发送与账本，`media.go` 构造媒体消息段。`group-manager/` 与 `bot-hub/` 均为独立 Go module，SQLite 等业务依赖不进入 SDK 模块。
 
 在 Desktop 的“插件 → WS 插件”启动服务，并允许插件 ID 接入：
 
@@ -73,6 +73,8 @@ OnEvent: func(ctx context.Context, c *lwplugin.Client, e lwplugin.Event) error {
 | `client.Request(ctx, method, params, &out)` | 通用宿主 RPC，例如 accounts.list、settings.get、只读消息查询 |
 | `client.Wechat(account).Call/Submit` | 命名微信业务调用/异步提交 |
 | `Wechat.Send/SendText/SendImage` | 微信消息段/文本/本地图片发送 |
+| `client.Telegram(account).Call/DownloadFile` | 同步转发任意 Telegram Bot API（支持 `TelegramUpload` 内联上传）与按 `file_id` 下载文件 |
+| `Telegram.SendMessage/SendPhoto/SendDocument/SendVoice` | Telegram 文本/媒体发送快捷方法（另含内联回调、改删消息、命令菜单与群管快捷方法） |
 | `client.Send/Reply` | 多平台主动发送/按事件来源回复 |
 | `client.Calls(account, platform).Query` | 通用调用账本 get/find/detail/list/queue |
 | `client.RunOnce(ctx)` | 单次会话，不自动重连 |
@@ -98,7 +100,7 @@ _ = result; _ = err; _ = queryErr
 
 ## 事件与回调
 
-完整事件目录由 `AllEvents()` 返回，包括通用 `GenericMessageReceived/GenericMessageSent`、微信专用 `WechatMessageReceived/WechatMessageSent`、`CallUpdated`、`MessageFilter`、账号状态和两种 Hint。旧 `MessageReceived/MessageSent` 是微信专用事件的兼容别名。`GroupRefreshHint/SyncHint` 对应 `wechat.group.refresh_hint` 和 `wechat.sync.hint`，Data 分别解码为 GroupHint / SyncMetadata，需要新版宿主。
+完整事件目录由 `AllEvents()` 返回，包括通用 `GenericMessageReceived/GenericMessageSent`、微信专用 `WechatMessageReceived/WechatMessageSent/WechatMessageObserved`、`CallUpdated`、`MessageFilter`、账号状态、两种 Hint，以及 6 种 Telegram 交互/群管事件（`TelegramCallbackQuery`、`TelegramEditedMessage`、`TelegramMyChatMember`、`TelegramChatMember`、`TelegramChatJoinRequest`、`TelegramMessageReaction`）。旧 `MessageReceived/MessageSent` 是微信专用事件的兼容别名。`GroupRefreshHint/SyncHint` 对应 `wechat.group.refresh_hint` 和 `wechat.sync.hint`，Data 分别解码为 GroupHint / SyncMetadata，需要新版宿主。
 
 Hint 是需要核对的实时线索，不是已确认入群/退群，也不保证断线持久化重放。OnConnect 在每次重连完成后执行，可用于重新核对本地基线。selector 是有符号位掩码，不等于群 ID 或退出者。
 

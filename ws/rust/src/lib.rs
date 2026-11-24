@@ -18,6 +18,29 @@ use tokio_tungstenite::{
 pub const PROTOCOL_VERSION: u16 = 2;
 const SEND_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// 宿主 WS 协议 v2 公开事件名常量（含通用、微信与 Telegram 交互/群管事件）。
+pub mod events {
+    pub const MESSAGE_RECEIVED: &str = "message.received";
+    pub const MESSAGE_SENT: &str = "message.sent";
+    pub const ACCOUNT_ONLINE: &str = "account.online";
+    pub const ACCOUNT_OFFLINE: &str = "account.offline";
+
+    pub const WECHAT_MESSAGE_RECEIVED: &str = "wechat.message.received";
+    pub const WECHAT_MESSAGE_SENT: &str = "wechat.message.sent";
+    pub const WECHAT_MESSAGE_OBSERVED: &str = "wechat.message.observed";
+    pub const WECHAT_MESSAGE_FILTER: &str = "wechat.message.filter";
+    pub const WECHAT_CALL_UPDATED: &str = "wechat.call.updated";
+    pub const WECHAT_GROUP_REFRESH_HINT: &str = "wechat.group.refresh_hint";
+    pub const WECHAT_SYNC_HINT: &str = "wechat.sync.hint";
+
+    pub const TELEGRAM_CALLBACK_QUERY: &str = "telegram.callback_query";
+    pub const TELEGRAM_EDITED_MESSAGE: &str = "telegram.edited_message";
+    pub const TELEGRAM_MY_CHAT_MEMBER: &str = "telegram.my_chat_member";
+    pub const TELEGRAM_CHAT_MEMBER: &str = "telegram.chat_member";
+    pub const TELEGRAM_CHAT_JOIN_REQUEST: &str = "telegram.chat_join_request";
+    pub const TELEGRAM_MESSAGE_REACTION: &str = "telegram.message_reaction";
+}
+
 pub struct Manifest<'a> {
     pub id: &'a str,
     pub title: &'a str,
@@ -127,6 +150,40 @@ impl Session {
         }))
         .await?;
         Ok(request_id)
+    }
+
+    /// Calls any Telegram Bot API method through `telegram.call` and returns `req_id`.
+    pub async fn send_telegram_call(
+        &mut self,
+        account_id: &str,
+        method: &str,
+        params: Value,
+    ) -> Result<String> {
+        self.send_call(
+            "telegram.call",
+            json!({
+                "account_id": account_id,
+                "method": method,
+                "params": params,
+            }),
+        )
+        .await
+    }
+
+    /// Downloads a Telegram file by `file_id` (base64 envelope) and returns `req_id`.
+    pub async fn send_telegram_download_file(
+        &mut self,
+        account_id: &str,
+        file_id: &str,
+    ) -> Result<String> {
+        self.send_call(
+            "telegram.download_file",
+            json!({
+                "account_id": account_id,
+                "file_id": file_id,
+            }),
+        )
+        .await
     }
 
     /// Sends a protocol frame such as an action or an event acknowledgement request.
