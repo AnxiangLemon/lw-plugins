@@ -14,7 +14,7 @@
 
 `endpoint.go` 负责端点发现，`client.go` 负责连接/订阅/并发 RPC，`types.go` 定义 DTO，`wechat.go` 封装微信调用和回执，`telegram.go` 封装 Telegram Bot API 调用、内联 Base64 文件上传与 `download_file`，`actions.go` 处理多平台发送与账本，`media.go` 构造媒体消息段。`bot-hub/` 是独立 Go module，应用级业务与面板不进入 SDK 模块。
 
-在 Desktop 的“插件 → WS 插件”启动服务，并允许插件 ID 接入：
+在 LW Tools 的“插件 → WS 插件”启动服务，并允许插件 ID 接入：
 
 ```powershell
 $env:LW_PLUGIN_ENDPOINT_FILE = 'C:\path\to\host-data\config\plugin-endpoint.json'

@@ -2,7 +2,7 @@
 
 [返回 README](../README.md) · [接口面板](wechat-panel.md) · [开发与维护](development.md)
 
-本指南介绍 Lua 与 Python WS 插件共用的微信业务调用方式。运行前请按 [README](../README.md) 安装兼容微信插件协议 v2 的宿主和 `lwplugin` SDK。
+本指南介绍 WS 插件的微信业务调用方式（以 Python 为例，Go / Rust SDK 语义相同）。运行前请按 [README](../README.md) 安装兼容微信插件协议 v2 的宿主和 `lwplugin` SDK。
 
 ## 接口与参数
 
@@ -23,37 +23,6 @@
 收到 `Message too long` 时，在 LW Tools 的「插件 → WS 插件 → 服务设置」将「消息大小上限（字节）」设为 `67108864`（64 MiB）。保存会重启运行中的 WS 服务，启用自动重连的插件会重新接入。使用旧版宿主时，完全退出应用，在数据目录的 `config/lwcli.toml` 中将 `[plugin_ws]` 的 `max_frame_bytes` 改为 `67108864`，再启动应用。显式保存的上限会继续生效。
 
 分页使用各接口返回的实际游标、offset 和继续/结束标志，不自动按页码递增，不混用 SNS/Favor/登录游标。TenPay 预查询、领取、转账查询、收款和退款都是独立动作，不自动执行下一步；结果不确定时先查询原回执与实际业务状态。返回的 PB 逐项状态及支付业务状态还需按接口检查。
-
-## Lua：接收事件并调用接口
-
-以下代码可放在 Lua 插件脚本中。收到群内 `!wx-members` 后查询群成员，并将调用结果写入日志：
-
-```lua
-PLUGIN_ID = "example.members"
-PLUGIN_TITLE = "群成员查询示例"
-PLUGIN_VERSION = "1.0.0"
-
-local plugin = require("lw.plugin")
-local json = require("json")
-local log = require("log")
-
-plugin.on("wechat.message.received", function(event)
-    local message = event.message
-    if message.text ~= "!wx-members" or not message.is_group then
-        return
-    end
-
-    local wx = plugin.wechat(event.account_id)
-    local result = wx:call(
-        "group.get_chat_room_member_detail",
-        { chatRoomId = message.peer_id },
-        { idempotency_key = "members:" .. event.event_id }
-    )
-    log.info(json.encode(result))
-end)
-```
-
-回复辅助函数见 [L.lua](../lua/lib/L.lua)。普通事件回调的返回值不终止其他插件；统一过滤应使用显式 prefilter。
 
 ## Python：默认等待与异步提交
 
@@ -99,44 +68,30 @@ result = await wx.calls.wait(accepted.call_id)
 
 ## 查询当前插件的调用记录
 
-`calls.list`、`calls.detail`、`calls.queue` 只读取当前插件在指定账号下的记录。`status="needs_review"` 可筛选 `unknown` 及含未知消息段的 `partial`；列表通过 `next_before_id` 翻页。
-
-### Lua
-
-在已获取 `wx = plugin.wechat(account_id)` 的上下文中：
-
-```lua
-local page = wx.calls:list({ status = "needs_review", limit = 20 })
-for _, row in ipairs(page.items) do
-    local detail = wx.calls:detail(row.call_id)
-    require("log").info(require("json").encode(detail.result))
-end
-```
-
-### Python
+`calls.list`、`calls.detail`、`calls.queue` 只读取当前插件在指定账号下的记录。`status` 按精确状态筛选（如 `unknown`、`partial`）；列表通过 `next_before_id` 翻页。
 
 在已获取 `wx = ctx.wechat(account_id)` 的异步处理函数中：
 
 ```python
-page = await wx.calls.list(status="needs_review", limit=20)
+page = await wx.calls.list(status="unknown", limit=20)
 for row in page["items"]:
     detail = await wx.calls.detail(row.call_id)
     print(detail.result)
 ```
 
-## 保留期与人工核对
+## 保留期与结果核对
 
 以下为宿主默认值，实际以宿主配置为准；保留期设为 `0` 表示永久保留。
 
 | 记录 | 默认保留期 | 到期行为 |
 | --- | --- | --- |
-| 业务调用详情 | 30 天 | `data` / `raw` 为 `null`，回执标记 `details_expired` |
-| 待补发事件 | 7 天 | 超出补发窗口的事件不再补发 |
-| 精简回执与幂等信息 | 调用完成或结案起 90 天 | 原回执不可查询，原幂等键不再保证去重 |
+| 业务调用详情 | 7 天 | `data` / `raw` 为 `null`，回执标记 `details_expired` |
+| 待补发事件 | 3 天 | 超出补发窗口的事件不再补发 |
+| 精简回执与幂等信息 | 调用完成起 30 天 | 原回执不可查询，原幂等键不再保证去重 |
 
 回执到期后，`get`、`wait`、`detail` 无法找到记录，`find` 返回 `null`。查不到记录不等于从未执行；回执过期后重用同一个键可能再次执行业务动作。
 
-宿主“插件 → 调用记录”负责保留策略、取消排队和人工核对。人工结论通过 `wechat.call.updated` 中的 `result.resolution` 提供，原始 `status` 保持不变。插件不负责宿主管理授权或登录恢复。
+宿主“插件 → 调用记录”负责保留策略和取消排队。`unknown` 不会自动重发，需要插件或人工根据业务状态核对。插件不负责宿主管理授权或登录恢复。
 
 ## 验证示例
 

@@ -9,9 +9,6 @@
 ```text
 lw-plugins/
 ├── docs/                  # 面向插件开发者的文档
-├── examples/              # 宿主配置示例
-├── lua/                   # 宿主直接加载的 Lua 插件
-│   └── lib/L.lua          # 共享辅助库
 ├── ws/go/                 # Go WS SDK 与两端共用的协议测试数据
 │   └── bot-hub/           # LW Bot Hub 独立 Go 模块（含内嵌 Web 面板）
 ├── ws/python/
@@ -48,10 +45,6 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 
 SDK 测试覆盖跨事件循环启动、断线原因和幂等键、业务调用、事件确认、错误日志和多平台 WS 行为。Go / Python 共用 `ws/go/testdata/sdk-contract.json`，新增协议请同时更新两端实现和[协议对照](sdk-parity.md)。面板测试使用本地模拟宿主，覆盖全部 174 个接口入口、账号选择、参数校验、实时消息、JSON 精度、异步回执、业务失败和跨来源请求；目录生成器测试验证公开方法范围与字段转换。这些测试不需要实际账号或运行中的宿主。
 
-## Lua 辅助库回归
-
-在仓库根目录使用 Lua 5.4 执行 `lua tests/lua_helpers.lua`。测试以模拟宿主检查连续回复的幂等序号、事件重放和 Demo 的平台路由，不连接账号。
-
 ## 调试插件
 
 1. 先运行 `python ws/python/wechat_panel.py --demo`，确认 Python 依赖与面板可正常启动。
@@ -72,7 +65,7 @@ python -m pip wheel ./ws/python --no-deps --wheel-dir dist
 
 ## 插件能力与宿主内部封装
 
-插件以宿主 `wechat.methods` 返回的命名方法为准，通过 Lua `wx:call` 或 Go/Python `Call/call` 提交。宿主校验契约后调用业务路由，不依赖桌面页面是否使用对应 Rust Client 包装。不能用“主程序没有直接调用”判断插件业务接口可以删除。
+插件以宿主 `wechat.methods` 返回的命名方法为准，通过 Go/Python/Rust SDK 的 `Call/call` 提交。宿主校验契约后调用业务路由，不依赖管理页是否使用对应 Rust Client 包装。不能用“主程序没有直接调用”判断插件业务接口可以删除。
 
 维护接口时同时核对宿主方法目录、参数契约、面板目录和插件示例。仅调整 Rust 内部包装不应改变插件方法名、权限或回执语义。新增接口后用本地模拟服务验证提交、查询与错误结果；未连接真实业务服务的测试不代表业务已实测。
 

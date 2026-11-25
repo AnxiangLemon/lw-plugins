@@ -2,13 +2,12 @@
 
 [返回 README](../README.md) · [Python SDK](../ws/python/README.md) · [微信业务调用](wechat-business.md) · [开发与调试](development.md)
 
-插件运行在 LW Desktop / Web 提供的能力之上。宿主管理账号、登录授权、连接权限和消息存储；插件接收事件、处理自己的业务逻辑，并通过宿主 API 回复或调用业务方法。
+插件运行在 LW Tools 宿主提供的能力之上，通过 WebSocket 以独立进程接入。宿主管理账号、登录授权、连接权限和消息存储；插件接收事件、处理自己的业务逻辑，并通过宿主 API 回复或调用业务方法。
 
 ## 选择开发方式
 
 | 方式 | 适合场景 | 运行方式 |
 | --- | --- | --- |
-| Lua | 简单命令、过滤、转发和轻量业务逻辑 | 将脚本安装到宿主插件目录，由宿主加载 |
 | Go WS | 成员监控、常驻任务、单程序部署 | 使用 [Go SDK](../ws/go/README.md)，编译后独立连接宿主 |
 | Rust WS | Tokio 服务、Tauri 客户端 | 使用 [Rust SDK](../ws/rust/README.md)，通过 WS 会话订阅事件和调用宿主 |
 | Python WS | 异步处理、第三方 Python 库、独立服务或本地 Web 界面 | 安装 `lwplugin`，独立进程通过 WS 连接宿主 |
@@ -64,14 +63,6 @@ python my_plugin.py
 
 已有可运行示例：[echo.py](../ws/python/echo.py)、[assistant.py](../ws/python/assistant.py)、[wechat_business.py](../ws/python/wechat_business.py)。
 
-## Lua：安装并修改 Demo
-
-按 [Lua 安装步骤](../README.md#安装-lua-插件)放置 `demo.lua` 和 `lib/L.lua`，扫描并启用后，使用另一个账号发送 `!ping`，应收到 `pong`。
-
-开发自己的插件时，可复制 [demo.lua](../lua/demo.lua)，修改 `PLUGIN_ID`、`PLUGIN_TITLE`、`PLUGIN_VERSION` 和业务处理函数。保留稳定的插件 ID，避免同时加载两个相同 ID 的脚本。修改后在宿主重新加载；共享库更新时也要重新加载引用它的插件。
-
-Lua 使用 `plugin.on("wechat.message.received", handler)` 订阅微信事件，`plugin.wechat(account_id)` 获取业务调用对象。示例通过 `L.reply` 回复，业务 API 见[业务指南中的完整 Lua 示例](wechat-business.md#lua接收事件并调用接口)。
-
 ## 事件与发送平台
 
 Python 事件处理函数可以接收 `event`，或 `event, ctx` 两个参数；推荐使用 `async def`，耗时 I/O 应使用异步库，避免在回调中执行阻塞操作。
@@ -90,7 +81,7 @@ Python 事件处理函数可以接收 `event`，或 `event, ctx` 两个参数；
 
 ## 过滤与可靠调用
 
-普通回调的 `return False` 或发送消息不会阻止其他插件。确需拦截微信入站消息时使用显式 filter，并保持处理简短：
+普通回调的返回值或发送消息不会阻止其他插件。确需拦截微信入站消息时使用显式 filter，并保持处理简短：
 
 ```python
 @plugin.filter

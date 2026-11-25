@@ -2,7 +2,7 @@
 
 单进程、单条 WebSocket 连接的多平台群管理与消息监控转发中心（支持微信与 Telegram），内嵌本地 Web 管理面板（零前端运行依赖，单二进制即可运行）。
 
-[仓库首页](../../README.md) · [Go SDK](../README.md) · [程序入口](main.go)
+[仓库首页](../../../README.md) · [Go SDK](../README.md) · [程序入口](main.go)
 
 ## 核心能力
 

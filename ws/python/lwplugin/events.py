@@ -216,7 +216,7 @@ def image_segment(base64: str) -> Dict[str, Any]:
 def image_file_segment(path: Union[str, PathLike]) -> Dict[str, Any]:
     """读取插件所在机器上的图片，生成当前宿主支持的 Base64 消息段。
 
-    文件路径不会发给宿主，因此插件和 Desktop 可以运行在不同机器。
+    文件路径不会发给宿主，因此插件和宿主可以运行在不同机器。
     此函数只编码原始字节，不压缩、不转码；图片格式仍由服务端校验。
     不接受 URL，文件不存在、不可读或为空时在提交前报错。
     """

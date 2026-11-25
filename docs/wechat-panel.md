@@ -71,7 +71,7 @@ python ws/python/wechat_panel.py --demo --port 8765
 | 显示内容 | 优先 `message.raw.content`，其次 `message.text`，再回退到原始消息 JSON |
 | 消息历史 | 不读取宿主数据库，不在面板服务端缓存；刷新或关闭页面后不补查历史 |
 | 账号选择 | 右上角选择仅影响接口调用，不筛选实时消息 |
-| 消息过滤 | 宿主的 Lua / WS prefilter 先运行，被拦截的消息不会到达面板 |
+| 消息过滤 | 宿主的 WS prefilter 先运行，被拦截的消息不会到达面板 |
 
 例如，`message_filter` 开启“过滤非文本消息”时，表情消息也会被拦截。关闭该选项后只影响之后收到的消息，面板不会补放已过滤事件。
 

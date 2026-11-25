@@ -1,13 +1,12 @@
 # LW Plugins
 
-LW Tools 的 Lua 插件、Go、Python 和 Rust WebSocket SDK、Bot Hub 多平台群管与监控中心及微信接口面板。插件通过 Lua API 或 WebSocket 使用宿主提供的账号和业务能力。运行测试和模拟面板只需要本仓库，连接实际账号需要兼容的 LW Desktop 或 Web 宿主。
+LW Tools 的 Go、Python 和 Rust WebSocket 插件 SDK、Bot Hub 多平台群管与监控中心及微信接口面板。插件是独立进程，通过 WebSocket 使用宿主提供的账号和业务能力。运行测试和模拟面板只需要本仓库，连接实际账号需要运行中的 LW Tools 宿主。
 
 ## 从这里开始
 
 | 你想做什么 | 入口 |
 | --- | --- |
 | 编写第一个插件 | [插件开发入门](docs/plugin-development.md) |
-| 安装 Lua 插件 | [Lua 安装步骤](#安装-lua-插件) |
 | 验证 WS 连接和消息回复 | [Python 运行步骤](#运行-python-示例) |
 | 在浏览器中调试微信接口 | [微信接口面板](docs/wechat-panel.md) |
 | 编写 Python WS 插件 | [lwplugin SDK](ws/python/README.md) |
@@ -34,19 +33,6 @@ python ws/python/wechat_panel.py --demo
 
 ## 插件一览
 
-微信媒体收录由 LW 私有网盘的 WS 连接完成。升级后，请在 LW Tools 插件页停用已安装的旧版「媒体归档」Lua 插件。
-
-### Lua
-
-| 文件 | 用途 |
-| --- | --- |
-| [demo.lua](lua/demo.lua) | 收到 `!ping` 后回复 `pong` |
-| [message_filter.lua](lua/message_filter.lua) | 按消息类型、发送者、会话和关键词过滤消息 |
-| [message_forwarder.lua](lua/message_forwarder.lua) | 根据规则在账号、会话之间转发消息 |
-| [archive_clone.lua](lua/archive_clone.lua) | 对接 Archive 服务，配置路由和重置会话 |
-| [微信业务开发](docs/wechat-business.md) | Lua 群成员查询示例、业务调用与回执查询 |
-| [lib/L.lua](lua/lib/L.lua) | 消息识别、会话处理与回复辅助库 |
-
 ### Go / WebSocket
 
 | 目录 | 用途 |
@@ -67,42 +53,12 @@ python ws/python/wechat_panel.py --demo
 
 | 组件 | 要求 |
 | --- | --- |
-| LW 宿主 | 支持微信插件协议 v2；使用 Lua 时提供 Lua 插件运行环境 |
+| LW 宿主 | LW Tools，支持 WS 插件协议 v2 |
 | Python | 3.9 或更新版本 |
 | `lwplugin` | 2.4.1，源码位于 [ws/python/lwplugin](ws/python/lwplugin) |
 | Python 依赖 | SDK 安装时自动安装；`panel` 可选依赖包含面板所需包 |
 
-Lua 由宿主直接加载，不需要单独安装 Lua。Python 示例运行在独立进程中；模拟面板只需本仓库与 Python 环境。宿主配置示例见 [lwcli.example.toml](examples/lwcli.example.toml)，请按宿主版本调整后使用。
-
-## 安装 Lua 插件
-
-1. 在宿主插件页打开“插件目录”，确认实际加载位置。
-2. 复制需要的 `.lua` 文件，并保留工具库的相对路径。例如安装 Demo：
-
-   ```text
-   plugins/
-   ├── demo.lua
-   └── lib/
-       └── L.lua
-   ```
-
-3. 点击“扫描插件”，按需启用，并在“插件设置”中填写配置。
-4. 如需统一过滤消息，将 `message_filter` 排在业务插件之前。
-
-同一个插件 ID 只保留一份。单独导入 `.lua` 不会自动导入 `lib/L.lua`；修改主脚本、元数据或公共库后，在宿主中重新加载相关插件。
-
-### 直接加载源码目录
-
-支持自定义 Lua 目录的宿主，可以在数据目录的 `config/lwcli.toml` 中配置：
-
-```toml
-[plugin_lua]
-directory = 'C:/path/to/lw-plugins/lua'
-```
-
-将路径替换为本仓库的 `lua/` 目录，重启宿主后扫描并启用插件。相对路径以 `lwcli.toml` 所在目录为基准；未配置时使用宿主默认的 `<data-root>/plugins/`。
-
-多个宿主可读取同一份源码，各自保留启用列表、设置和数据。导入、卸载等文件操作会修改共享目录；仅停用某个宿主中的插件时，关闭该宿主的启用开关即可。Web 宿主需使用服务进程可访问的路径，容器部署时先挂载源码目录。
+插件运行在独立进程中；模拟面板只需本仓库与 Python 环境。
 
 ## 运行 Python 示例
 
@@ -148,7 +104,7 @@ Echo 的回复前缀可通过 `LWPLUGIN_ECHO_PREFIX` 修改。Assistant 支持 `
 
 ## 消息与调用约定
 
-- 普通 `plugin.on` 回调的返回值不控制消息传播，回复消息也不会终止其他插件。拦截需使用显式 prefilter；Lua 示例见 `message_filter` 的 `plugin.filter` 与 `plugin.stop()`。
+- 普通 `plugin.on` 回调的返回值不控制消息传播，回复消息也不会终止其他插件。拦截需使用显式 prefilter（Python 为 `@plugin.filter` 与 `plugin.stop()`）。
 - 微信业务事件由宿主持久化，重连后可能补发；回调失败可能重复投递，有副作用的调用应使用稳定的幂等键。账号状态等实时事件不补发。
 - 业务调用以 `status` 判断结果；等待超时后先查询原回执。返回字段、状态和保留期见[业务指南](docs/wechat-business.md)。
 
@@ -156,14 +112,13 @@ Echo 的回复前缀可通过 `LWPLUGIN_ECHO_PREFIX` 修改。Assistant 支持 `
 
 | 现象 | 检查项 |
 | --- | --- |
-| Lua 加载失败 | 文件目录、Lua 行号、`lib/L.lua`、`require("L")` 和 traceback |
 | `No module named 'lwplugin'` | 在当前虚拟环境中执行 `python -m pip install -e ./ws/python` |
 | WS 无法接入 | 服务是否开启、连接文件路径、令牌、协议版本、插件接入权限 |
 | 收不到消息 | 账号在线状态、事件订阅、过滤条件、是否被 prefilter 拦截 |
 | 接口返回失败或等待超时 | 保存 `call_id`、幂等键和 `error`，查询原调用结果 |
 
-Desktop 插件页的“打开日志”可定位宿主日志；Python traceback 在运行终端中。排障时结合 `plugin_id`、`request_id`、`stage` 和 `hint` 查看具体原因。
+宿主日志在其数据目录的 `logs/` 下；Python traceback 在运行终端中。排障时结合 `plugin_id`、`request_id`、`stage` 和 `hint` 查看具体原因。
 
 ## 许可证
 
-本仓库采用 [MIT License](LICENSE)。两套 SDK 的接口、事件、回执语义与源码发布方式见 [Go / Python SDK 协议对照](docs/sdk-parity.md)。
+本仓库采用 [MIT License](LICENSE)。Go / Python SDK 的接口、事件、回执语义与源码发布方式见 [Go / Python SDK 协议对照](docs/sdk-parity.md)。
