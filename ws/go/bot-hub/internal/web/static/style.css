@@ -514,6 +514,26 @@ body.modal-open {
   background: var(--sky-soft);
   color: var(--sky);
 }
+.account-avatar.qq {
+  background: rgba(59, 130, 246, 0.14);
+  color: #2563eb;
+}
+.account-avatar.feishu {
+  background: rgba(20, 184, 166, 0.14);
+  color: #0d9488;
+}
+.account-avatar.dingtalk {
+  background: rgba(14, 165, 233, 0.14);
+  color: #0284c7;
+}
+.account-avatar.discord {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
+}
+.account-avatar.generic {
+  background: rgba(139, 92, 246, 0.14);
+  color: #7c3aed;
+}
 .account-avatar .avatar-dot {
   position: absolute;
   right: -2px;

@@ -178,10 +178,13 @@ func syncAccounts(
 		return
 	}
 	type rawAcc struct {
-		ID        string `json:"id"`
-		AccountID string `json:"account_id"`
-		Platform  string `json:"platform"`
-		Online    bool   `json:"online"`
+		ID          string `json:"id"`
+		AccountID   string `json:"account_id"`
+		Platform    string `json:"platform"`
+		DisplayName string `json:"display_name"`
+		Nickname    string `json:"nickname"`
+		Avatar      string `json:"avatar"`
+		Online      bool   `json:"online"`
 	}
 	var list []rawAcc
 	if err := json.Unmarshal(raw, &list); err != nil {
@@ -195,7 +198,6 @@ func syncAccounts(
 	accounts := make([]store.AccountInfo, 0, len(list))
 	onlineWechat := map[string]bool{}
 	for _, item := range list {
-		// 宿主 accounts.list 的 display_name 是宿主备注，不用于插件展示；真实昵称与头像通过平台接口拉取。
 		uid := strings.TrimSpace(item.AccountID)
 		if uid == "" {
 			uid = strings.TrimSpace(item.ID)
@@ -203,39 +205,58 @@ func syncAccounts(
 		if uid == "" {
 			continue
 		}
-		accounts = append(accounts, store.AccountInfo{
-			Platform: item.Platform,
+		plat := strings.ToLower(strings.TrimSpace(item.Platform))
+		info := store.AccountInfo{
+			Platform: plat,
 			ID:       uid,
 			Online:   item.Online,
-		})
-		if item.Online {
-			go fetchAccountProfile(context.Background(), c, st, item.Platform, uid)
 		}
-		if item.Platform == "telegram" && item.Online {
+		// 微信与 Telegram 的真实昵称/头像通过平台官方接口拉取；其他外部平台驱动（QQ/飞书等）直接采用宿主上报资料。
+		if plat != "wechat" && plat != "telegram" {
+			info.Nickname = strings.TrimSpace(item.Nickname)
+			if info.Nickname == "" {
+				info.Nickname = strings.TrimSpace(item.DisplayName)
+			}
+			info.Avatar = strings.TrimSpace(item.Avatar)
+		}
+		accounts = append(accounts, info)
+		if item.Online {
+			go fetchAccountProfile(context.Background(), c, st, plat, uid)
+		}
+		if plat == "telegram" && item.Online {
 			go tgMod.RegisterCommands(context.Background(), c, uid)
 		}
-		if item.Platform == "wechat" && item.Online {
+		if plat == "wechat" && item.Online {
 			onlineWechat[uid] = true
 		}
 	}
 	if len(accounts) > 0 {
 		st.SetAccounts(accounts)
-		wxOn, wxAll, tgOn, tgAll := 0, 0, 0, 0
+		type platCount struct {
+			name   string
+			online int
+			total  int
+		}
+		order := make([]string, 0, 4)
+		counts := make(map[string]*platCount)
 		for _, a := range accounts {
-			switch a.Platform {
-			case "wechat":
-				wxAll++
-				if a.Online {
-					wxOn++
-				}
-			case "telegram":
-				tgAll++
-				if a.Online {
-					tgOn++
-				}
+			pc, ok := counts[a.Platform]
+			if !ok {
+				pc = &platCount{name: displayPlatformName(a.Platform)}
+				counts[a.Platform] = pc
+				order = append(order, a.Platform)
+			}
+			pc.total++
+			if a.Online {
+				pc.online++
 			}
 		}
-		store.PrintConsoleLine("info", "system", "", fmt.Sprintf("已同步宿主账号：微信 %d/%d 在线，Telegram %d/%d 在线", wxOn, wxAll, tgOn, tgAll), "")
+		parts := make([]string, 0, len(order))
+		for _, p := range order {
+			pc := counts[p]
+			parts = append(parts, fmt.Sprintf("%s %d/%d 在线", pc.name, pc.online, pc.total))
+		}
+		store.PrintConsoleLine("info", "system", "", "已同步宿主账号："+strings.Join(parts, "，"), "")
 	}
 	// 重连后仅为尚未建立基线的在线监控群初始化基线；已有持久化缓存的群等待变动提醒或手动核对，减少不必要请求
 	for _, r := range cfgMgr.Get().WechatRooms {
@@ -246,6 +267,28 @@ func syncAccounts(
 }
 
 // fetchAccountProfile 通过微信 / Telegram 官方接口拉取账号真实昵称与头像。
+func displayPlatformName(p string) string {
+	switch strings.ToLower(strings.TrimSpace(p)) {
+	case "wechat":
+		return "微信"
+	case "telegram":
+		return "Telegram"
+	case "qq":
+		return "QQ"
+	case "feishu":
+		return "飞书"
+	case "dingtalk":
+		return "钉钉"
+	case "discord":
+		return "Discord"
+	default:
+		if p == "" {
+			return "未知平台"
+		}
+		return p
+	}
+}
+
 func fetchAccountProfile(parent context.Context, c *lwplugin.Client, st *store.Store, platform, uid string) {
 	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()

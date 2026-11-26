@@ -370,36 +370,75 @@ func extractMentions(msg *lwplugin.Message) []string {
 }
 
 func extractChatTitle(msg *lwplugin.Message) string {
-	if len(msg.Raw) > 0 {
-		var raw struct {
-			TG struct {
-				ChatTitle string `json:"chat_title"`
-			} `json:"tg"`
+	if msg == nil || len(msg.Raw) == 0 {
+		return ""
+	}
+	var raw map[string]any
+	if json.Unmarshal(msg.Raw, &raw) != nil || raw == nil {
+		return ""
+	}
+	// 1. Telegram 专用字段
+	if tg, ok := raw["tg"].(map[string]any); ok {
+		if t := stringFromMap(tg, "chat_title", "title"); t != "" {
+			return t
 		}
-		if json.Unmarshal(msg.Raw, &raw) == nil && raw.TG.ChatTitle != "" {
-			return raw.TG.ChatTitle
+	}
+	// 2. 通用外部平台驱动常见字段（QQ / 飞书 / 钉钉 / Discord 等）
+	if t := stringFromMap(raw, "chat_title", "group_name", "room_name", "channel_name", "chat_name", "title"); t != "" {
+		return t
+	}
+	for _, nestedKey := range []string{"chat", "group", "channel", "room"} {
+		if sub, ok := raw[nestedKey].(map[string]any); ok {
+			if t := stringFromMap(sub, "title", "name", "group_name", "chat_title"); t != "" {
+				return t
+			}
 		}
 	}
 	return ""
 }
 
 func extractSender(msg *lwplugin.Message) (string, string) {
+	if msg == nil {
+		return "", ""
+	}
 	id := msg.From.ID
 	name := msg.From.ID
-	if len(msg.Raw) > 0 {
-		var raw struct {
-			TG struct {
-				UserID      int64  `json:"user_id"`
-				Username    string `json:"username"`
-				DisplayName string `json:"display_name"`
-			} `json:"tg"`
+	if len(msg.Raw) == 0 {
+		return id, name
+	}
+	var raw map[string]any
+	if json.Unmarshal(msg.Raw, &raw) != nil || raw == nil {
+		return id, name
+	}
+	// 1. Telegram 专用字段
+	if tg, ok := raw["tg"].(map[string]any); ok {
+		if uid := int64FromMap(tg, "user_id"); uid > 0 {
+			id = fmt.Sprintf("%d", uid)
 		}
-		if json.Unmarshal(msg.Raw, &raw) == nil && raw.TG.UserID > 0 {
-			id = fmt.Sprintf("%d", raw.TG.UserID)
-			if raw.TG.Username != "" {
-				name = "@" + raw.TG.Username
-			} else if raw.TG.DisplayName != "" {
-				name = raw.TG.DisplayName
+		if uname := stringFromMap(tg, "username"); uname != "" {
+			name = "@" + strings.TrimPrefix(uname, "@")
+			return id, name
+		}
+		if dname := stringFromMap(tg, "display_name"); dname != "" {
+			return id, dname
+		}
+	}
+	// 2. 通用外部平台驱动字段（QQ / 飞书 / 钉钉 / Discord 等）
+	if n := stringFromMap(raw, "sender_name", "sender_nickname", "nickname", "display_name", "user_name", "username"); n != "" {
+		return id, n
+	}
+	for _, nestedKey := range []string{"sender", "user", "author", "from"} {
+		if sub, ok := raw[nestedKey].(map[string]any); ok {
+			if id == "" {
+				if subID := stringFromMap(sub, "id", "user_id", "open_id", "uin"); subID != "" {
+					id = subID
+				} else if numID := int64FromMap(sub, "id", "user_id", "uin"); numID > 0 {
+					id = fmt.Sprintf("%d", numID)
+				}
+			}
+			// 优先群名片 card / 昵称 nickname / display_name / name / username
+			if n := stringFromMap(sub, "card", "nickname", "display_name", "name", "global_name", "username"); n != "" {
+				return id, n
 			}
 		}
 	}
@@ -410,13 +449,34 @@ func extractSenderIsBot(msg *lwplugin.Message) bool {
 	if msg == nil || len(msg.Raw) == 0 {
 		return false
 	}
-	var raw struct {
-		TG struct {
-			IsBot bool `json:"is_bot"`
-		} `json:"tg"`
+	var raw map[string]any
+	if json.Unmarshal(msg.Raw, &raw) != nil || raw == nil {
+		return false
 	}
-	if json.Unmarshal(msg.Raw, &raw) == nil {
-		if raw.TG.IsBot {
+	if tg, ok := raw["tg"].(map[string]any); ok {
+		if boolFromMap(tg, "is_bot") {
+			return true
+		}
+	}
+	if boolFromMap(raw, "is_bot", "sender_is_bot", "from_bot") {
+		return true
+	}
+	for _, nestedKey := range []string{"sender", "user", "author", "from"} {
+		if sub, ok := raw[nestedKey].(map[string]any); ok {
+			if boolFromMap(sub, "is_bot", "bot") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func boolFromMap(m map[string]any, keys ...string) bool {
+	if m == nil {
+		return false
+	}
+	for _, k := range keys {
+		if b, ok := m[k].(bool); ok && b {
 			return true
 		}
 	}
@@ -480,6 +540,16 @@ func platformLabel(p string) string {
 		return "微信"
 	case "telegram":
 		return "Telegram"
+	case "qq":
+		return "QQ"
+	case "feishu":
+		return "飞书"
+	case "dingtalk":
+		return "钉钉"
+	case "discord":
+		return "Discord"
+	case "slack":
+		return "Slack"
 	default:
 		return p
 	}
@@ -521,6 +591,11 @@ type wechatRawMeta struct {
 	VoiceFormat    int
 	VoiceBufID     string
 	VoiceClientID  string
+
+	// 表情 (msg_type == 47)
+	EmojiMD5    string
+	EmojiLen    int64
+	EmojiCDNURL string
 
 	// AppMsg (msg_type == 49)
 	AppType       int // 6=文件, 5=链接, 57=引用消息
@@ -607,6 +682,19 @@ func parseWechatRawMeta(msg *lwplugin.Message, platform string) *wechatRawMeta {
 			meta.VoiceFormat = int(parseInt64(doc.Voice.VoiceFormat))
 			meta.VoiceBufID = strings.TrimSpace(doc.Voice.BufID)
 			meta.VoiceClientID = strings.TrimSpace(doc.Voice.ClientMsgID)
+		}
+	case 47: // 微信自定义表情
+		var doc struct {
+			Emoji struct {
+				MD5    string `xml:"md5,attr"`
+				Len    string `xml:"len,attr"`
+				CDNURL string `xml:"cdnurl,attr"`
+			} `xml:"emoji"`
+		}
+		if xml.Unmarshal([]byte(meta.Content), &doc) == nil {
+			meta.EmojiMD5 = strings.TrimSpace(doc.Emoji.MD5)
+			meta.EmojiLen = parseInt64(doc.Emoji.Len)
+			meta.EmojiCDNURL = strings.TrimSpace(doc.Emoji.CDNURL)
 		}
 	case 49: // AppMsg：文件 / 链接 / 引用回复等
 		var doc struct {
@@ -826,21 +914,40 @@ func buildContentSummary(msg *lwplugin.Message, types []string, wxMeta *wechatRa
 				tags = append(tags, "[名片]")
 			}
 		case "custom":
-			kind := stringFromMap(m, "custom_type", "type")
-			if strings.EqualFold(kind, "sticker") {
-				var emoji string
-				if extra, ok := m["extra"].(map[string]any); ok {
-					emoji = stringFromMap(extra, "emoji")
+			kind := strings.ToLower(strings.TrimSpace(stringFromMap(m, "custom_type", "type")))
+			extra, _ := m["extra"].(map[string]any)
+			switch kind {
+			case "sticker", "emoji", "face", "mface", "market_face":
+				emoji := stringFromMap(extra, "emoji", "summary", "text")
+				label := "表情"
+				if kind == "sticker" {
+					label = "贴纸"
 				}
 				if emoji != "" {
-					tags = append(tags, fmt.Sprintf("[贴纸 %s]", emoji))
+					tags = append(tags, fmt.Sprintf("[%s %s]", label, emoji))
 				} else {
-					tags = append(tags, "[贴纸]")
+					tags = append(tags, fmt.Sprintf("[%s]", label))
 				}
-			} else if kind != "" {
-				tags = append(tags, fmt.Sprintf("[%s]", kind))
-			} else {
-				tags = append(tags, "[表情/自定义消息]")
+			case "forward", "multiforward", "multi_forward":
+				tags = append(tags, "[合并转发]")
+			case "json", "ark", "card", "miniapp", "app":
+				if title := stringFromMap(extra, "title", "prompt"); title != "" {
+					tags = append(tags, fmt.Sprintf("[卡片: %s]", title))
+				} else {
+					tags = append(tags, "[卡片]")
+				}
+			case "poke", "nudge":
+				tags = append(tags, "[戳一戳]")
+			case "red_packet", "hongbao", "wallet":
+				tags = append(tags, "[红包]")
+			case "music":
+				tags = append(tags, "[音乐]")
+			default:
+				if kind != "" {
+					tags = append(tags, fmt.Sprintf("[%s]", kind))
+				} else {
+					tags = append(tags, "[表情/自定义消息]")
+				}
 			}
 		}
 	}
@@ -948,10 +1055,26 @@ func extractMediaPayload(msg *lwplugin.Message, platform, accountID, chatID stri
 					WxVoiceTimeMS:   wxMeta.VoiceLengthMS,
 				}
 			}
+		case 47: // 微信自定义表情（同平台凭 MD5+len 免上传直转，跨平台可通过 cdnurl 下载）
+			if (wxMeta.EmojiMD5 != "" && wxMeta.EmojiLen > 0) || wxMeta.EmojiCDNURL != "" {
+				return &notifier.MediaPayload{
+					Kind:            "sticker",
+					SourcePlatform:  "wechat",
+					SourceAccountID: accountID,
+					SourceChatID:    chatID,
+					IsGroup:         isGroup,
+					URL:             wxMeta.EmojiCDNURL,
+					Filename:        "emoji.gif",
+					FileSize:        wxMeta.EmojiLen,
+					WechatXML:       wxMeta.Content,
+					WxEmojiMD5:      wxMeta.EmojiMD5,
+					WxEmojiLen:      wxMeta.EmojiLen,
+				}
+			}
 		}
 	}
 
-	// 2. Telegram / 通用消息段（图片 / 视频 / 文件 / 语音 / 贴纸）
+	// 2. Telegram / QQ / 飞书等通用消息段（图片 / 视频 / 文件 / 语音 / 贴纸表情）
 	for _, seg := range msg.Segments {
 		kind := strings.ToLower(strings.TrimSpace(seg.Type))
 		m, ok := seg.Data.(map[string]any)
@@ -959,26 +1082,33 @@ func extractMediaPayload(msg *lwplugin.Message, platform, accountID, chatID stri
 			continue
 		}
 		if kind == "custom" {
-			if !strings.EqualFold(stringFromMap(m, "custom_type", "type"), "sticker") {
+			ctype := strings.ToLower(strings.TrimSpace(stringFromMap(m, "custom_type", "type")))
+			if ctype != "sticker" && ctype != "emoji" && ctype != "mface" && ctype != "market_face" {
 				continue
 			}
 			extra, _ := m["extra"].(map[string]any)
-			fileID := stringFromMap(extra, "file_id", "fileId")
-			if fileID == "" {
-				fileID = stringFromMap(m, "file_id", "fileId")
-			}
-			if fileID == "" {
+			fileID := firstNonEmpty(stringFromMap(extra, "file_id", "fileId"), stringFromMap(m, "file_id", "fileId"))
+			mediaURL := firstNonEmpty(stringFromMap(extra, "url", "image_url", "cdnurl"), stringFromMap(m, "url"))
+			b64 := firstNonEmpty(stringFromMap(extra, "base64"), stringFromMap(m, "base64"))
+			if fileID == "" && mediaURL == "" && b64 == "" {
 				continue
 			}
-			return &notifier.MediaPayload{
+			p := &notifier.MediaPayload{
 				Kind:            "sticker",
 				SourcePlatform:  plat,
 				SourceAccountID: accountID,
 				SourceChatID:    chatID,
 				IsGroup:         isGroup,
-				TGFileID:        fileID,
-				Emoji:           stringFromMap(extra, "emoji"),
+				Base64:          b64,
+				URL:             mediaURL,
+				Emoji:           stringFromMap(extra, "emoji", "summary"),
+				Filename:        stringFromMap(extra, "filename", "fileName", "name"),
+				MimeType:        stringFromMap(extra, "mime_type", "mimeType"),
 			}
+			if plat == "telegram" {
+				p.TGFileID = fileID
+			}
+			return p
 		}
 		switch kind {
 		case "image", "video", "file", "voice":
@@ -995,9 +1125,10 @@ func extractMediaPayload(msg *lwplugin.Message, platform, accountID, chatID stri
 			MimeType:        stringFromMap(m, "mime_type", "mimeType"),
 			FileSize:        int64FromMap(m, "size", "file_size", "fileSize"),
 		}
-		// Telegram 无声 GIF / 动图会被 Bot API 放入 document 字段（.mp4），在群管家侧按视频转发
+		// Telegram 无声 GIF / 动图会被 Bot API 放入 document 字段（.mp4），标记 IsAnimation 以便发微信时优先转成动图表情
 		if plat == "telegram" && kind == "file" && isMP4File(payload.Filename, payload.MimeType) {
 			payload.Kind = "video"
+			payload.IsAnimation = true
 			if payload.MimeType == "" {
 				payload.MimeType = "video/mp4"
 			}
@@ -1005,7 +1136,9 @@ func extractMediaPayload(msg *lwplugin.Message, platform, accountID, chatID stri
 		if src, ok := m["source"].(map[string]any); ok {
 			payload.Base64 = stringFromMap(src, "base64")
 			payload.URL = stringFromMap(src, "url")
-			payload.TGFileID = stringFromMap(src, "file_id", "fileId")
+			if plat == "telegram" {
+				payload.TGFileID = stringFromMap(src, "file_id", "fileId")
+			}
 		}
 		if payload.Base64 == "" {
 			payload.Base64 = stringFromMap(m, "base64")
@@ -1013,7 +1146,7 @@ func extractMediaPayload(msg *lwplugin.Message, platform, accountID, chatID stri
 		if payload.URL == "" {
 			payload.URL = stringFromMap(m, "url")
 		}
-		if payload.TGFileID == "" {
+		if plat == "telegram" && payload.TGFileID == "" {
 			payload.TGFileID = stringFromMap(m, "file_id", "fileId", "id")
 		}
 		if payload.Base64 != "" || payload.URL != "" || payload.TGFileID != "" {

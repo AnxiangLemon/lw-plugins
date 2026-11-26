@@ -350,7 +350,8 @@ function accountAvatarHTML(a) {
   const key = String(a.platform || "").toLowerCase();
   const meta = PLATFORM_META[key];
   const fallback = meta ? meta.short : (key.slice(0, 2).toUpperCase() || "?");
-  const platClass = key === "wechat" ? "wechat" : "telegram";
+  const knownClasses = new Set(["wechat", "telegram", "qq", "feishu", "dingtalk", "discord"]);
+  const platClass = knownClasses.has(key) ? key : "generic";
   const imgHTML = a.avatar
     ? `<img class="avatar-img" src="${esc(a.avatar)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" /><span class="avatar-fallback" style="display:none">${esc(fallback)}</span>`
     : `<span class="avatar-fallback">${esc(fallback)}</span>`;

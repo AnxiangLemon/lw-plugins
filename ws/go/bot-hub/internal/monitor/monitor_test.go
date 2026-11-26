@@ -210,7 +210,7 @@ func TestWechatXMLParsingAndMediaExtraction(t *testing.T) {
 		t.Fatalf("expected auto media placeholder caption to be cleared, got %q", got)
 	}
 	mediaGif := extractMediaPayload(tgGifDoc, "telegram", "bot_1", "-100123", nil)
-	if mediaGif == nil || mediaGif.Kind != "video" || mediaGif.MimeType != "video/mp4" || mediaGif.TGFileID != "CgACAgUAAxkBAA" {
+	if mediaGif == nil || mediaGif.Kind != "video" || !mediaGif.IsAnimation || mediaGif.MimeType != "video/mp4" || mediaGif.TGFileID != "CgACAgUAAxkBAA" {
 		t.Fatalf("unexpected telegram mp4 media payload: %+v", mediaGif)
 	}
 
@@ -281,5 +281,71 @@ func TestTelegramMentionDoesNotDuplicateTrailingAt(t *testing.T) {
 	got := buildContentSummary(tgMentionMsg, types, nil)
 	if got != "@snakehyc 服务器宕机了" {
 		t.Fatalf("expected clean original text without trailing @@, got %q", got)
+	}
+}
+
+func TestWechatEmojiAndMultiPlatformExtraction(t *testing.T) {
+	// 1. 微信表情 (msg_type=47) 解析与提取
+	emojiXML := `<msg><emoji md5="0123456789abcdef0123456789abcdef" len="45678" cdnurl="https://example.com/emoji.gif" /></msg>`
+	emojiRaw, _ := json.Marshal(map[string]any{
+		"msg_type": 47,
+		"content":  emojiXML,
+	})
+	wxEmoji := &lwplugin.Message{
+		Platform: "wechat",
+		ChatType: "group",
+		Segments: []lwplugin.Segment{{
+			Type: "custom",
+			Data: map[string]any{"platform": "wechat", "custom_type": "emoji"},
+		}},
+		Raw: emojiRaw,
+	}
+	metaEmoji := parseWechatRawMeta(wxEmoji, "wechat")
+	mediaEmoji := extractMediaPayload(wxEmoji, "wechat", "wxid_bot", "123@chatroom", metaEmoji)
+	if mediaEmoji == nil || mediaEmoji.Kind != "sticker" || mediaEmoji.WxEmojiMD5 != "0123456789abcdef0123456789abcdef" || mediaEmoji.WxEmojiLen != 45678 || mediaEmoji.URL != "https://example.com/emoji.gif" {
+		t.Fatalf("unexpected wechat emoji payload: %+v", mediaEmoji)
+	}
+
+	// 2. 外部平台驱动（如 QQ / 飞书）元数据、Bot 识别、自定义段与 URL 媒体提取
+	qqRaw, _ := json.Marshal(map[string]any{
+		"group_name": "QQ 测试大群",
+		"sender": map[string]any{
+			"user_id":  123456,
+			"card":     "运维小明",
+			"nickname": "小明",
+			"is_bot":   true,
+		},
+	})
+	qqMsg := &lwplugin.Message{
+		Platform: "qq",
+		ChatType: "group",
+		From:     lwplugin.Peer{ID: "123456", Platform: "qq"},
+		Segments: []lwplugin.Segment{
+			{Type: "image", Data: map[string]any{"url": "https://cdn.qq.example/pic.png"}},
+			{Type: "custom", Data: map[string]any{"platform": "qq", "custom_type": "mface", "extra": map[string]any{"summary": "[开心]"}}},
+		},
+		Raw: qqRaw,
+	}
+	if title := extractChatTitle(qqMsg); title != "QQ 测试大群" {
+		t.Fatalf("expected qq group_name, got %q", title)
+	}
+	sid, sname := extractSender(qqMsg)
+	if sid != "123456" || sname != "运维小明" {
+		t.Fatalf("unexpected qq sender: id=%q name=%q", sid, sname)
+	}
+	if !extractSenderIsBot(qqMsg) {
+		t.Fatal("expected qq sender.is_bot=true to be detected")
+	}
+	if platformLabel("qq") != "QQ" || platformLabel("feishu") != "飞书" || platformLabel("custom_im") != "custom_im" {
+		t.Fatalf("unexpected platformLabel results")
+	}
+	qqMedia := extractMediaPayload(qqMsg, "qq", "qq_bot_1", "998877", nil)
+	if qqMedia == nil || qqMedia.Kind != "image" || qqMedia.URL != "https://cdn.qq.example/pic.png" || qqMedia.TGFileID != "" {
+		t.Fatalf("unexpected qq media payload: %+v", qqMedia)
+	}
+	qqTypes := detectMessageTypes(qqMsg, nil)
+	qqSummary := buildContentSummary(qqMsg, qqTypes, nil)
+	if !strings.Contains(qqSummary, "[图片]") || !strings.Contains(qqSummary, "[表情 [开心]]") {
+		t.Fatalf("unexpected qq summary: %q", qqSummary)
 	}
 }

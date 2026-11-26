@@ -6,6 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"mime"
+	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -51,12 +56,13 @@ type MediaPayload struct {
 	Base64   string // 内联 Base64（不含 data: 前缀）
 	URL      string // 公网 URL（可选）
 	TGFileID string // Telegram file_id（仅源为 TG 时有值）
-	Filename string
-	MimeType string
-	Emoji    string // 贴纸对应的 emoji（如 😄），用于动态矢量贴纸降级
-	FileSize int64  // 已知文件字节数（0 表示未知）
+	Filename    string
+	MimeType    string
+	Emoji       string // 贴纸对应的 emoji（如 😄），用于动态矢量贴纸降级
+	IsAnimation bool   // 是否为无声动图 / GIF（如 Telegram animation .mp4），发往微信时优先尝试转为动图表情
+	FileSize    int64  // 已知文件字节数（0 表示未知）
 
-	// 微信原生 XML 与 CDN/语音下载元数据
+	// 微信原生 XML 与 CDN/语音/表情下载元数据
 	WechatXML       string
 	WxFileID        string // 图片中图/普通 CDN ID、视频/文件 CDN fileId
 	WxBigFileID     string // 图片原图 cdnbigimgurl（优先尝试）
@@ -69,8 +75,10 @@ type MediaPayload struct {
 	WxVoiceLen      int64
 	WxVoiceFormat   int
 	WxVoiceTimeMS   int
+	WxEmojiMD5      string // 微信表情（msg_type=47）MD5，用于同平台免上传直转
+	WxEmojiLen      int64  // 微信表情（msg_type=47）字节长度
 
-	// 同一条消息转发至多个跨平台目标时的下载缓存
+	// 同一条消息转发至多个跨平台目标时的下载与转码缓存
 	cacheMu        sync.Mutex
 	downloaded     bool
 	cachedBase64   string
@@ -79,6 +87,8 @@ type MediaPayload struct {
 	cachedSize     int64
 	coverExtracted bool
 	cachedCover    string
+	emojiConverted bool
+	cachedEmojiGIF string
 }
 
 // KnownSize 返回元数据中已知的文件字节数（未知时返回 0）。
@@ -187,7 +197,22 @@ func (d *Dispatcher) SendWithMediaOptions(
 		if target.AccountID == "" || target.To == "" {
 			return errors.New("微信转发目标缺少发送账号或接收目标 ID")
 		}
-		// 1. 微信 → 微信同平台：图片/视频/文件直接通过 CDN XML 转发，零上传且不受跨平台大小限制
+		// 1. 微信 → 微信同平台表情（msg_type=47）：直接凭 MD5 + totalLen 调 msg.send_emoji 免上传转发
+		if activeMedia != nil && canWechatEmojiForward(activeMedia) {
+			if strings.TrimSpace(body) != "" {
+				if err := sendWechatText(ctx, c, target.AccountID, target.To, body); err != nil {
+					return err
+				}
+			}
+			if err := d.forwardWechatEmoji(ctx, c, target, activeMedia); err != nil {
+				if strings.TrimSpace(body) == "" && strings.TrimSpace(fallbackBody) != "" {
+					return sendWechatText(ctx, c, target.AccountID, target.To, fallbackBody)
+				}
+			}
+			return nil
+		}
+
+		// 2. 微信 → 微信同平台：图片/视频/文件直接通过 CDN XML 转发，零上传且不受跨平台大小限制
 		if activeMedia != nil && canWechatXMLForward(activeMedia) {
 			if strings.TrimSpace(body) != "" {
 				if err := sendWechatText(ctx, c, target.AccountID, target.To, body); err != nil {
@@ -203,7 +228,7 @@ func (d *Dispatcher) SendWithMediaOptions(
 			return nil
 		}
 
-		// 2. 跨平台（TG → 微信）或微信语音：先校验大小并准备字节，再决定是否附带超限提示
+		// 3. 跨平台（TG/QQ/飞书等 → 微信）或微信语音：先校验大小并准备字节，再决定是否附带超限提示
 		if activeMedia != nil {
 			b64, filename, mimeType, err := d.prepareMediaBytes(ctx, c, activeMedia, maxBytes)
 			if err != nil {
@@ -241,7 +266,28 @@ func (d *Dispatcher) SendWithMediaOptions(
 		return sendWechatText(ctx, c, target.AccountID, target.To, fallbackBody)
 
 	default:
-		return fmt.Errorf("不支持的转发通道类型: %s（仅支持 wechat / telegram）", target.Type)
+		// 通用外部平台驱动通道（QQ / 飞书 / 钉钉 / Discord 等）：走宿主统一 action.send 协议
+		plat := strings.ToLower(strings.TrimSpace(target.Type))
+		if plat == "" {
+			return errors.New("转发目标缺少平台类型")
+		}
+		if target.AccountID == "" || target.To == "" {
+			return fmt.Errorf("%s 转发目标缺少发送账号或目标会话 ID", plat)
+		}
+		if activeMedia != nil {
+			err := d.sendMediaToGenericPlatform(ctx, c, plat, target, body, activeMedia, maxBytes)
+			if err == nil {
+				return nil
+			}
+			var tooLarge *mediaTooLargeError
+			if errors.As(err, &tooLarge) {
+				fallbackBody = appendTooLargeNotice(fallbackBody, activeMedia.Kind, tooLarge.actual, tooLarge.limit)
+			}
+		}
+		if strings.TrimSpace(fallbackBody) == "" {
+			return nil
+		}
+		return sendGenericSegments(ctx, c, plat, target.AccountID, target.To, []lwplugin.Segment{lwplugin.Text(fallbackBody)})
 	}
 }
 
@@ -395,6 +441,12 @@ func (d *Dispatcher) sendDownloadedMediaToWechat(
 	var seg lwplugin.Segment
 	switch media.Kind {
 	case "image":
+		// GIF 动图优先走微信表情上传发送，在微信中可保持动图播放；失败则自动回退普通图片
+		if isGIFData(b64, filename, mimeType) {
+			if err := d.uploadAndSendWechatEmoji(ctx, c, target, b64); err == nil {
+				return nil
+			}
+		}
 		seg = lwplugin.Image(b64)
 	case "sticker":
 		lowerName := strings.ToLower(strings.TrimSpace(filename))
@@ -405,17 +457,37 @@ func (d *Dispatcher) sendDownloadedMediaToWechat(
 			// Lottie 矢量动态贴纸（gzip 压缩 JSON）微信无法直接渲染，返回错误触发 emoji / 摘要降级
 			return errors.New("Telegram .tgs 矢量贴纸不支持直接转为微信图片")
 		case magic == "image":
-			// 静态 .webp / .png / .jpg / .gif 贴纸，宿主 lw-cdn 支持直接作为微信图片发送
+			// 静态 .webp / .png / .jpg / .gif 贴纸：优先走微信自定义表情，失败则降级为普通图片
+			if err := d.uploadAndSendWechatEmoji(ctx, c, target, b64); err == nil {
+				return nil
+			}
 			seg = lwplugin.Image(b64)
 		case magic == "webm" || strings.HasSuffix(lowerName, ".webm") || strings.Contains(lowerMime, "video/"):
+			// 视频贴纸（.webm）：若本机有 ffmpeg，优先转 GIF 后发微信动图表情；否则降级为文件发送
+			if gifB64, ok := media.emojiGIFBase64(ctx, b64, "webm"); ok {
+				if err := d.uploadAndSendWechatEmoji(ctx, c, target, gifB64); err == nil {
+					return nil
+				}
+			}
 			if !strings.Contains(filename, ".") {
 				filename = "sticker.webm"
 			}
 			seg = lwplugin.File(b64, filename)
 		default:
+			if err := d.uploadAndSendWechatEmoji(ctx, c, target, b64); err == nil {
+				return nil
+			}
 			seg = lwplugin.Image(b64)
 		}
 	case "video":
+		// Telegram 无声 GIF / 动图（animation .mp4）：优先用 ffmpeg 转 GIF 并按微信表情发送；无 ffmpeg 或失败时平滑降级为微信视频
+		if media.IsAnimation {
+			if gifB64, ok := media.emojiGIFBase64(ctx, b64, "mp4"); ok {
+				if err := d.uploadAndSendWechatEmoji(ctx, c, target, gifB64); err == nil {
+					return nil
+				}
+			}
+		}
 		seg = lwplugin.Video(b64, media.videoCoverBase64(ctx, b64))
 	case "voice":
 		if media.SourcePlatform == "wechat" {
@@ -433,9 +505,19 @@ func (d *Dispatcher) sendDownloadedMediaToWechat(
 			seg = lwplugin.File(b64, filename)
 		}
 	default:
-		// Telegram 无声 GIF / 动图可能以无名 document 下发，下载后若确认是 .mp4 则按微信视频发送
+		// Telegram 无声 GIF / 动图可能以无名 document 下发，下载后若确认是 .mp4，优先尝试转微信动图表情，失败则发微信视频
 		if media.SourcePlatform == "telegram" && isWechatPlayableMP4(filename, mimeType) {
+			if gifB64, ok := media.emojiGIFBase64(ctx, b64, "mp4"); ok {
+				if err := d.uploadAndSendWechatEmoji(ctx, c, target, gifB64); err == nil {
+					return nil
+				}
+			}
 			seg = lwplugin.Video(b64, media.videoCoverBase64(ctx, b64))
+		} else if isGIFData(b64, filename, mimeType) {
+			if err := d.uploadAndSendWechatEmoji(ctx, c, target, b64); err == nil {
+				return nil
+			}
+			seg = lwplugin.Image(b64)
 		} else {
 			seg = lwplugin.File(b64, filename)
 		}
@@ -543,7 +625,161 @@ func (d *Dispatcher) prepareMediaBytes(
 		return media.cachedBase64, media.cachedFilename, media.cachedMime, nil
 	}
 
+	// 4. 通用公网 / 外部平台驱动 HTTP(S) URL 下载（适用于 QQ / 飞书 / Discord 等外部驱动与微信表情 cdnurl）
+	if isHTTPURL(media.URL) {
+		b64, size, name, mimeType, err := downloadHTTPMedia(ctx, media.URL, maxBytes)
+		if err != nil {
+			return "", "", "", err
+		}
+		finalName := firstNonEmpty(media.Filename, name, defaultFilenameForKind(media.Kind))
+		finalMime := firstNonEmpty(mimeType, media.MimeType)
+		media.downloaded = true
+		media.cachedBase64 = b64
+		media.cachedFilename = finalName
+		media.cachedMime = finalMime
+		media.cachedSize = size
+		if size > maxBytes {
+			return "", "", "", &mediaTooLargeError{actual: size, limit: maxBytes}
+		}
+		return media.cachedBase64, media.cachedFilename, media.cachedMime, nil
+	}
+
 	return "", "", "", errors.New("缺少可下载的媒体来源信息")
+}
+
+// sendMediaToGenericPlatform 通过宿主统一 action.send 协议向任意外部平台驱动（QQ / 飞书 / 钉钉 / Discord 等）发送媒体与配文。
+func (d *Dispatcher) sendMediaToGenericPlatform(
+	ctx context.Context,
+	c *lwplugin.Client,
+	platform string,
+	target config.NotifyTarget,
+	body string,
+	media *MediaPayload,
+	maxBytes int64,
+) error {
+	b64, filename, mimeType, err := d.prepareMediaBytes(ctx, c, media, maxBytes)
+	if err != nil {
+		return err
+	}
+	if b64 == "" {
+		return errors.New("无可发送的媒体数据")
+	}
+	if filename == "" {
+		filename = defaultFilenameForKind(media.Kind)
+	}
+
+	var mediaSeg lwplugin.Segment
+	switch media.Kind {
+	case "image":
+		mediaSeg = lwplugin.Image(b64)
+	case "sticker":
+		magic := sniffBase64MediaKind(b64)
+		if magic == "gzip" || strings.HasSuffix(strings.ToLower(filename), ".tgs") {
+			return errors.New("不支持转发 .tgs 矢量贴纸到该平台")
+		}
+		if magic == "webm" || strings.HasSuffix(strings.ToLower(filename), ".webm") {
+			mediaSeg = lwplugin.File(b64, filename)
+		} else {
+			mediaSeg = lwplugin.Image(b64)
+		}
+	case "video":
+		mediaSeg = lwplugin.Video(b64, media.videoCoverBase64(ctx, b64))
+	case "voice":
+		vType := media.WxVoiceFormat
+		if vType <= 0 {
+			vType = 4
+		}
+		vTime := media.WxVoiceTimeMS
+		if vTime <= 0 {
+			vTime = 1000
+		}
+		mediaSeg = lwplugin.Voice(b64, vType, vTime)
+	default:
+		_ = mimeType
+		mediaSeg = lwplugin.File(b64, filename)
+	}
+
+	segs := make([]lwplugin.Segment, 0, 2)
+	if strings.TrimSpace(body) != "" {
+		segs = append(segs, lwplugin.Text(body))
+	}
+	segs = append(segs, mediaSeg)
+	return sendGenericSegments(ctx, c, platform, target.AccountID, target.To, segs)
+}
+
+func sendGenericSegments(ctx context.Context, c *lwplugin.Client, platform, accountID, to string, segs []lwplugin.Segment) error {
+	res, err := c.Send(ctx, accountID, to, segs, lwplugin.SendOptions{
+		Platform: platform,
+		Options:  lwplugin.Options{Key: lwplugin.NewKey()},
+	})
+	if err != nil {
+		return err
+	}
+	if res.Status == "failed" {
+		if res.Error != nil {
+			return fmt.Errorf("%s 发送失败 (%s): %s", platform, res.Error.Code, res.Error.Message)
+		}
+		return fmt.Errorf("%s 发送失败", platform)
+	}
+	return nil
+}
+
+func isHTTPURL(raw string) bool {
+	s := strings.ToLower(strings.TrimSpace(raw))
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+}
+
+func downloadHTTPMedia(ctx context.Context, rawURL string, maxBytes int64) (string, int64, string, string, error) {
+	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, strings.TrimSpace(rawURL), nil)
+	if err != nil {
+		return "", 0, "", "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", 0, "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", 0, "", "", fmt.Errorf("下载远程媒体失败: HTTP %d", resp.StatusCode)
+	}
+	if resp.ContentLength > 0 && resp.ContentLength > maxBytes {
+		return "", resp.ContentLength, "", "", &mediaTooLargeError{actual: resp.ContentLength, limit: maxBytes}
+	}
+
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes+1))
+	if err != nil {
+		return "", 0, "", "", err
+	}
+	if int64(len(data)) > maxBytes {
+		return "", int64(len(data)), "", "", &mediaTooLargeError{actual: int64(len(data)), limit: maxBytes}
+	}
+	if len(data) == 0 {
+		return "", 0, "", "", errors.New("远程媒体返回空内容")
+	}
+
+	mimeType := strings.TrimSpace(resp.Header.Get("Content-Type"))
+	if idx := strings.Index(mimeType, ";"); idx > 0 {
+		mimeType = strings.TrimSpace(mimeType[:idx])
+	}
+	var filename string
+	if cd := resp.Header.Get("Content-Disposition"); cd != "" {
+		if _, params, err := mime.ParseMediaType(cd); err == nil {
+			filename = strings.TrimSpace(params["filename"])
+		}
+	}
+	if filename == "" {
+		if u, err := url.Parse(rawURL); err == nil {
+			base := path.Base(u.Path)
+			if base != "" && base != "/" && base != "." {
+				filename = base
+			}
+		}
+	}
+	return base64.StdEncoding.EncodeToString(data), int64(len(data)), filename, mimeType, nil
 }
 
 func (d *Dispatcher) ensureWechatCDNDNS(ctx context.Context, c *lwplugin.Client, accountID string) {
