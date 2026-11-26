@@ -97,4 +97,4 @@ for row in page["items"]:
 
 SDK、面板和目录生成器均可使用本仓库的本地模拟测试验证，无需实际账号。命令和覆盖范围见[开发与调试](development.md#运行测试)。
 
-Emoji 的同步游标、版本字段及 Base64 业务数据按服务返回值原样传入；`emoji.get_pack_download.token` 是表情商店业务字段。上传与收藏操作不会自动发送表情消息。VoIP 继续由专用语音插件通过 `wechat.voip.control` 接入；CDN DNS Relay 的 Prepare/Complete 由宿主管理，通用业务目录不暴露这些内部流程。
+Emoji 的同步游标、版本字段及 Base64 业务数据按服务返回值原样传入；`emoji.get_pack_download.token` 是表情商店业务字段。上传与收藏操作不会自动发送表情消息。VoIP 由专用语音插件通过 `wechat.voip.ilink_context` / `wechat.voip.ilink_rpc` 接入；CDN DNS Relay 的 Prepare/Complete 由宿主管理，通用业务目录不暴露这些内部流程。
